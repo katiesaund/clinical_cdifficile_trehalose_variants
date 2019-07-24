@@ -4,7 +4,7 @@ This reposity contains details in support of a manuscript currently in preparati
 This repository includes the R code necessary for figures, supplementary tables, and statistical analyses.  
   
 ## Sequence data  
-C. difficile genome sequences will soon be available under the NCBI BioProject PRJNA555604.   
+C. difficile genome sequences will soon be available under the NCBI BioProject [PRJNA555604.](https://www.ncbi.nlm.nih.gov/bioproject/555604)   
   
 ## Contributors    
 Katie Saund (katiephd@umich.edu) and Krishna Rao contributed code to this project.  
