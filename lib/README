@@ -1,0 +1,6 @@
+The script run_trehalose_paper_analyis.R calls functions found in all of the 
+other scripts in the lib/ directory. This file contains relative paths that 
+point to the input data files necessary to run the analyses and generate the
+files, tables, and figures. 
+
+
