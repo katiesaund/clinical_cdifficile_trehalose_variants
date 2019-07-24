@@ -1,9 +1,4 @@
 *.internal
 *.pdf
 *.png
-*.tsv
-*.Rtab
-*.csv
-*.fa
-*.fna
-*.tree
+*.jpg
