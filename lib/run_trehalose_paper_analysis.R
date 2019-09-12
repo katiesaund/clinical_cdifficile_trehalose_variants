@@ -24,7 +24,7 @@ model_variables <-
   read_tsv("../data/inputs/model_variables_plus_ribo_and_id.tsv")
 
 # Create propensity scores and strata based on KR logistic regression
-create_propsenity_scores_and_strata(model_variables)
+create_risk_scores_and_strata(model_variables)
 
 # Format additional input data necessary for analysis 
 outgroup <- "ERR232398"

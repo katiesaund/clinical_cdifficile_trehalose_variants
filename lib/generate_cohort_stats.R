@@ -7,7 +7,7 @@
 #'
 #' @noRd
 print_ribo_stats <- function(metadata, rbtyp){
-  print(paste0("Num ",rbtyp, " in sequenced cohort"))
+  print(paste0("Num ", rbtyp, " in sequenced cohort"))
   print(nrow(metadata %>% 
                filter(WGS_performed == 1, Ribotype == rbtyp)))
   print(paste0("Num ", rbtyp, " in sequenced cases"))
@@ -85,14 +85,17 @@ generate_stats <- function(metadata_path){
   sink(paste0("../data/outputs/", Sys.Date(), "_descriptive_stats.txt"))
   # Study population: 
   # Number of CDI cases
-  print("Number of CDI cases")
+  print("Number of C. difficile infections (original cohort)")
   print(nrow(metadata))
+  
   # Number of individual patients
   print("Number of individual patients")
   print(nrow(metadata %>% filter(Duplicated_Patient == FALSE)))
+  
   # Number of cases with complete data and from individual patients
   print("Number of cases with complete model data and from individual patient")
   print(nrow(metadata %>% filter(Duplicated_Patient_No_Missing_Info == FALSE)))
+  
   # Number of total ribotypes (all 1144 cases)
   print("Number of ribotypes (N=1144)")
   print(length(unique(metadata$Ribotype)) + 
@@ -100,20 +103,47 @@ generate_stats <- function(metadata_path){
                  sum(is.na(metadata$Ribotype), na.rm = FALSE) -
           2) # Don't count NA and unique twice: also in length(unique(Ribotype))
   # Number of isolates given a propensity score
+  
   print("Number of isolates with a propensity score")
-  print(sum(!is.na(metadata$Propensity_Score)))
+  print(sum(!is.na(metadata$Risk_Score)))
   
   # Number of isolates with WGS sequencing
-  print("Size of final matched set")
+  print("Size of start matched set")
   print(sum(metadata$WGS_performed))
   
   # Number of cases
-  print("Num cases")
+  print("Total number of cases")
   print(nrow(metadata %>% 
                filter(WGS_performed == 1, metadata$Severe_Outcome == 1)))
   
   # Number of controls
-  print("Num controls")
+  print("Total number of controls")
+  print(nrow(metadata %>% 
+               filter(WGS_performed == 1, metadata$Severe_Outcome == 0)))
+  
+  # Now only work with "good strata"
+  print("Below only with strata with at least 1 control and 1 case")
+  strata_info <- 
+    case_ctrl_stat %>% 
+    group_by(Stratum) %>% 
+    mutate("case_in_stratum" = sum(Severe_Outcome == 1), 
+           "ctrl_in_stratum" = sum(Severe_Outcome == 0)) 
+  good_strata <- strata_info %>% filter(case_in_stratum == 1 & ctrl_in_stratum > 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
+  bad_strata <- strata_info %>% filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
+  
+  metadata <- metadata %>% 
+    filter(Stratum %in% good_strata)
+  # Number of samples 
+  print("Number of isolates sequenced and included in matched analyses")
+  print(sum(metadata$WGS_performed == 1))
+  
+  # Number of cases
+  print("Number of cases")
+  print(nrow(metadata %>% 
+               filter(WGS_performed == 1, metadata$Severe_Outcome == 1)))
+  
+  # Number of controls
+  print("Number of controls")
   print(nrow(metadata %>% 
                filter(WGS_performed == 1, metadata$Severe_Outcome == 0)))
   
