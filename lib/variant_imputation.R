@@ -43,6 +43,51 @@ calculate_variant_ratio_by_ribo <- function(variant_data){
   return(obs_tre_var_by_ribo)
 } # end calculate_variant_ratio_by_ribo()
 
+#' calculate_insertion_ratio_by_ribo
+#' For each ribotype in the WGS'd cohort count what percent of the isolates from 
+#'   each ribotype has any of the three trehalose variants of interest (C171S, 
+#'   L172I, or four gene insertion.) Return a tibble with the observed trehalose 
+#'   utilization variant ratio for each ribotype. Save a table for supplement
+#'   with information about ribotype-specific ratio for trehalose variant 
+#'   presence.
+#' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
+#'   individual isolates and columns contain, among other info, trehalose
+#'   variants. 
+#'
+#' @return obs_tre_var_by_ribo. The fraction of total samples that have the 
+#'   four_gene_insertion by ribotype. 
+#' @noRd
+calculate_insertion_ratio_by_ribo <- function(variant_data){
+  obs_tre_var_by_ribo <- 
+    variant_data %>%
+    select(Ribotype, four_gene_insertion) %>% 
+    filter(!is.na(four_gene_insertion)) %>%
+    table() 
+  obs_tre_var_by_ribo <- 
+    cbind(obs_tre_var_by_ribo, rep(NA, nrow(obs_tre_var_by_ribo)) )
+  colnames(obs_tre_var_by_ribo) <-
+    c("tre_variant_absent", "tre_variant_present", "present_ratio")
+  obs_tre_var_by_ribo <- as_tibble(obs_tre_var_by_ribo, rownames = "Ribotype")
+  for (i in 1:nrow(obs_tre_var_by_ribo)) {
+    temp_num_in_ribo <-
+      sum(obs_tre_var_by_ribo$tre_variant_present[i] + 
+            obs_tre_var_by_ribo$tre_variant_absent[i])
+    obs_tre_var_by_ribo$present_ratio[i] <- 
+      obs_tre_var_by_ribo$tre_variant_present[i] / temp_num_in_ribo
+  }
+  obs_tre_var_by_ribo <- obs_tre_var_by_ribo %>% select(Ribotype, present_ratio)
+  
+  save_version <- obs_tre_var_by_ribo
+  save_version$present_ratio <- save_version$present_ratio * 100
+  colnames(save_version)[2] <- "% of isolates with trehalose insertion"
+  write_tsv(save_version, 
+            path = paste0("../data/outputs/", 
+                          Sys.Date(), 
+                          "_trehalose_insertion_prevalence_by_ribotype.tsv"), 
+            col_names = TRUE)
+  return(obs_tre_var_by_ribo)
+} # end calculate_insertion_ratio_by_ribo()
+
 # Deprecated function
 # convert_other_na_unique_ribo_to_other <- function(df){
 #  df$Ribotype[df$Ribotype %in% c("other", "Unique")] <- "misc"
@@ -109,6 +154,35 @@ predict_num_with_var <- function(variant_data, tre_var_by_ribo){
   return(num_of_missing_data_by_ribotype)
 } # end predict_num_with_var()
 
+
+#' predict_num_with_insertion
+#' Given the observed frequency with which trehalose utilization variants occur 
+#'   by ribotype in the sequenced cohort and the number of not sequenced 
+#'   isolates you have per ribotype, simply multiply these two numbers together 
+#'   to get the total number isolates that should be assigned to "presence" 
+#'   during the later imputation step. 
+#'
+#' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
+#'   individual isolates and columns contain, among other info, ribotypes.
+#' @param tre_var_by_ribo Tibble. Each row is a different ribotype. Columns 
+#'   include ribotype and the ratio of variant presence in that ribotype. 
+#'
+#' @return num_of_missing_data_by_ribotype. Tibble. The total number of isolates 
+#'   that should get assigned to presence during imputation by ribotype. 
+#' @noRd
+predict_num_with_insertion <- function(variant_data, tre_var_by_ribo){
+  non_sequenced <- variant_data %>% filter(is.na(four_gene_insertion))
+  num_of_missing_data_by_ribotype <- 
+    as.data.frame(non_sequenced %>% select(Ribotype) %>% table())
+  colnames(num_of_missing_data_by_ribotype)[1] <- "Ribotype"
+  num_of_missing_data_by_ribotype <- 
+    left_join(num_of_missing_data_by_ribotype, tre_var_by_ribo, by = "Ribotype")
+  num_of_missing_data_by_ribotype <- 
+    num_of_missing_data_by_ribotype %>%
+    mutate("assigned_to_1" = round(Freq * present_ratio, 0))
+  return(num_of_missing_data_by_ribotype)
+} # end predict_num_with_insertion()
+
 #' generate_imputed_data
 #' Generate a tibble with the imputed data. One row for each sample that
 #   wasn't sequenced. Each column, besides the ID, is a one run of the 
@@ -158,6 +232,57 @@ generate_imputed_data <- function(variant_data, n_perm, n_per_ribo){
   return(perm_imputed_data)
 } # end generate_imputed_data()
 
+#' generate_imputed_insertion
+#' Generate a tibble with the imputed data. One row for each sample that
+#   wasn't sequenced. Each column, besides the ID, is a one run of the 
+#   imputation process. 
+#' @param variant_data Tibble. Metadata. Isolates in rows. Features in columns.
+#' @param n_perm Number. Number of times to run imputation step. 
+#' @param n_per_ribo Tibble. Number of isolates to assign to trehalose 
+#'   utilization variant presence per ribotype. 
+#'
+#' @return perm_imputed_data. Tibble with n_perm + 1 columns. 1 column is ID, 
+#'   other columns correspond to imputations. Each row is an non-sequenced 
+#'   isolate. 
+#' @noRd
+generate_imputed_insertion <- function(variant_data, n_perm, n_per_ribo){
+  non_sequenced <- variant_data %>% filter(is.na(four_gene_insertion))
+  num_no_wgs_samples <- non_sequenced %>% nrow(.)
+  num_no_wgs_ribo <- length(unique(n_per_ribo$Ribotype))
+  
+  perm_imputed_data <- matrix(0, nrow = num_no_wgs_samples, ncol = n_perm)
+  row.names(perm_imputed_data) <- non_sequenced$ID
+  set.seed(1)
+  for (ribo in 1:num_no_wgs_ribo){
+    curr_ribo <- unique(n_per_ribo$Ribotype)[ribo]
+    num_isolates <- 
+      n_per_ribo %>% 
+      filter(Ribotype == curr_ribo) %>% 
+      select(assigned_to_1) %>% 
+      unlist() %>%  
+      unname()
+    curr_ids <- 
+      non_sequenced %>% 
+      filter(Ribotype == curr_ribo) %>% 
+      select(ID) %>% 
+      unlist() %>% 
+      unname()
+    
+    for (j in 1:n_perm){
+      ids_with_variants <- 
+        sample(x = curr_ids, size = as.numeric(num_isolates), replace = FALSE)
+      indices_with_variants <- 
+        which(row.names(perm_imputed_data) %in% ids_with_variants) 
+      perm_imputed_data[indices_with_variants, j] <- 1
+    }
+  }
+  
+  perm_imputed_data <- as_tibble(perm_imputed_data, rownames = "ID")
+  return(perm_imputed_data)
+} # end generate_imputed_insertion()
+
+
+
 #' join_imputed_to_seq
 #' This function joines the imputed variant data to the observed variant data. 
 #'   Said another way, this function joins the non-sequenced data to the 
@@ -192,6 +317,42 @@ join_imputed_to_seq <- function(var_data, n_perm, imp_mat){
   var_data <- full_join(var_data, imp_and_seq_var, by = "ID")
   return(var_data)
 } # end join_imputed_to_seq()
+
+#' join_imputed_insertion_to_seq
+#' This function joines the imputed variant data to the observed variant data. 
+#'   Said another way, this function joins the non-sequenced data to the 
+#'   sequenced data. It does this by replicating the sequenced variant data 
+#'   n_perm times, then row binding the imputed data to this replicated and
+#'   sequenced data. At the end each column contains the observed (sequenced)
+#'   variant data for sequenced isolates and the imputed (non-sequenced) variant
+#'   data for the non-sequenced isolates. This allows the FE test in the next
+#'   function to run tests on columns. 
+#'
+#' @param var_data Tibble. Metadata. Isolates in rows. 
+#' @param n_perm Number. Number of imputations performed.
+#' @param imp_mat Tibble. Imputed data. Each rows is an isolate (names in ID 
+#'   column). Other columns correspond to imputations. 
+#'
+#' @return var_data Tibble with imputed and observed variant data joined into 
+#'   one tibble. 
+#' @noRd
+join_imputed_insertion_to_seq <- function(var_data, n_perm, imp_mat){
+  temp_seq_var <- 
+    var_data %>% 
+    filter(WGS_performed == 1) %>%  
+    select(c(ID, four_gene_insertion))
+  temp_seq_var <- 
+    cbind(temp_seq_var, 
+          replicate(n_perm - 1, temp_seq_var$four_gene_insertion))
+  for (i in 2:ncol(temp_seq_var)) {
+    colnames(imp_mat)[i] <- colnames(temp_seq_var)[i] <- paste0("imp", i - 1)
+  }
+  
+  imp_and_seq_var <- rbind(imp_mat, temp_seq_var)
+  var_data <- full_join(var_data, imp_and_seq_var, by = "ID")
+  return(var_data)
+} # end join_imputed_insertion_to_seq()
+
 
 #' calculate_FE
 #' 1. For the sequenced data calculate the FE for only the sequenced variants. 

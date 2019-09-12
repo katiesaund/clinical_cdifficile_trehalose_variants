@@ -3,6 +3,7 @@ SNP_matrix.tsv
 *.pdf
 *.png
 *.jpg
+*/data/outputs/*
 <<<<<<< HEAD
 SNP_matrix.tsv
 =======

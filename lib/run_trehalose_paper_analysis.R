@@ -10,7 +10,7 @@ library(exact2x2)
 library(seqinr)
 
 # Functions -------------------------------------------------------------------# 
-source("../lib/create_propensity_scores_and_strata.R")
+source("../lib/create_risk_scores_and_strata.R")
 source("../lib/save_intermediate_data.R")
 source("../lib/generate_cohort_stats.R")
 source("../lib/save_r_session_log.R")
@@ -35,15 +35,13 @@ snp_path <- "../data/inputs/SNP_matrix.tsv"
 pan_path <- "../data/inputs/gene_presence_absence.Rtab"
 
 model_path <- paste0("../data/outputs/", Sys.Date(), "_severity_model.tsv")
-# TODO add bioproject information
-# bioproject_path <- "../data/inputs/bioproject_submission.tsv" ???
 
 save_data_for_tre_analysis(outgroup, 
                            keeper_path,
                            tree_path, 
                            snp_path, 
                            pan_path,
-                           model_path) # TODO add bioproject information
+                           model_path)
 
 # Describe study cohort (ribotype, presence of trehalose variants, etc...)
 metadata_path <- 
@@ -57,7 +55,6 @@ plot_trehalose_tree(updated_tree_path, metadata_path) # FALSE to drop tip.labels
 
 # Calculate conditional logistic regression and generate tables of results
 run_clogit_models(metadata_path)
-# TODO -- will need to update run_clogit_models with the bioproject name 
 
 # Run imputation for trehalose variant presence on non-sequenced isolates
 impute_variants(metadata_path, num_perm = 1000)

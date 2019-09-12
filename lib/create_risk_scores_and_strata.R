@@ -1,14 +1,14 @@
 # Adapted Krishna Rao's script into a function and updated outputs. 
 
-#' create_propsenity_scores_and_strata
-#' Function to generate the propensity scores and matched strata from model in 
+#' create_risk_scores_and_strata
+#' Generate the severe outcome risk scores and matched strata from model in 
 #'   Rao 2015 CID paper for trehalose analysis.  
 #' @param model_data Matrix or dataframe with model data.  
 #'
 #' @return Dataframe with dataset's propensity scores, stratum (when 
 #'   applicable), and original data that went into creating model. 
 #' @noMd
-create_propsenity_scores_and_strata <- function(model_data){
+create_risk_scores_and_strata <- function(model_data){
   model_param <- c("CDC_SEV_ATT",
                    "age", 
                    "gender..M.0.F.1.", 
@@ -56,7 +56,7 @@ create_propsenity_scores_and_strata <- function(model_data){
   complete_data <- 
     complete_data %>% mutate("Duplicated_Patient_No_Missing_Info" = FALSE)
   
-  # Propensity score matching  
+  # Matching  
   cases <- complete_data[complete_data$CDC_SEV_ATT == 1, , drop = FALSE]
   cases <- arrange(cases, desc(scores))
   
@@ -124,7 +124,7 @@ create_propsenity_scores_and_strata <- function(model_data){
                        "Ribotype", 
                        "Duplicated_Patient",
                        "Missing_Model_Data", 
-                       "Propensity_Score", 
+                       "Risk_Score", 
                        "Duplicated_Patient_No_Missing_Info", 
                        "Stratum", 
                        "Unmatched")
@@ -133,4 +133,4 @@ create_propsenity_scores_and_strata <- function(model_data){
             path = paste0("../data/outputs/",
                           Sys.Date(), 
                           "_severity_model.tsv"))
-} # end create_propsenity_scores_and_strata()
+} # end create_risk_scores_and_strata()

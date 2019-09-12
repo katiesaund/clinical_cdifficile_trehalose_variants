@@ -1,12 +1,12 @@
 # Goal: perform conditional logistic regression. 
 # Predictor variable(s): trehalose variants. 
 # Response variable: severe C. difficile infection outcome. 
-# Conditioned on stratum, which is based on propensity score. 
+# Conditioned on stratum, which is based on severe outcome risk score. 
 
 # Process outline: 
 # Generate presence/absence tables for each trehalose variant. 
 # If table has any zeroes remove that varaint from consideration. 
-# For each remaining variant perform a single, unadusted clogit. 
+# For each remaining variant perform a single, unadjusted clogit. 
 # Perform multiple test correction (fdr)
 # Examine statistics for each model. 
 
@@ -31,6 +31,7 @@ run_clogit_models <- function(metadata_path){
                    "ptsT", 
                    "treX", 
                    "treR2", 
+                   "Cys171Ser",
                    "age", 
                    "gender..M.0.F.1.", 
                    "METS", 
@@ -41,11 +42,10 @@ run_clogit_models <- function(metadata_path){
                    "WBC", 
                    "Duplicated_Patient", 
                    "Missing_Model_Data", 
-                   "Propensity_Score",           
+                   "Risk_Score",           
                    "Duplicated_Patient_No_Missing_Info", 
                    "Unmatched", 
                    "WGS_performed")
-  # TODO add bioproject column to this list. 
   model_input <- 
     model_input[ , !(colnames(model_input) %in% col_to_drop), drop = FALSE]
   model_input <- 
@@ -126,7 +126,6 @@ run_clogit_models <- function(metadata_path){
   
   # Subset to just the variants of interest
   var_of_interest <- c("C171S_L172I_or_insertion",
-                       "Cys171Ser" ,
                        "Leu172Ile", 
                        "four_gene_insertion")
   smaller_model <- model_results[model_results[ , 1] %in% var_of_interest, ]
