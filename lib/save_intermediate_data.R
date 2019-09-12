@@ -143,12 +143,9 @@ save_data_for_tre_analysis <- function(out_group,
                         sep = "\t",
                         stringsAsFactors = FALSE)
   
-  # Logistic model variables, propensity score, ribotype, metadata, etc...
+  # Logistic model variables, risk score, ribotype, metadata, etc...
   model_data <- read_tsv(model_path,
                          col_names = TRUE)
-  
-  # TODO add bioproject information
-  # bioproject <- read_tsv(bioproject_path, etc...)
   
   # Subset data to only high quality samples ----------------------------------#
   keepers <- rbind(keepers, c(out_group, out_group)) 
@@ -178,6 +175,12 @@ save_data_for_tre_analysis <- function(out_group,
     colnames(treR_snps) %>% 
     gsub("^.*p[.]", "", .) %>% 
     gsub("[|][0-9]+/723.*$", "", .)
+  
+  # Only keep variants causing amino acid changes (remove synonymous mutations)
+  no_amino_acid_substitution <- 
+    colnames(treR_snps)[(substr(colnames(treR_snps), 1, 3) == substr(colnames(treR_snps), nchar(colnames(treR_snps)) - 2, nchar(colnames(treR_snps)))) & nchar(colnames(treR_snps)) > 6]
+  treR_snps <- 
+    treR_snps[ , !(colnames(treR_snps) %in% no_amino_acid_substitution), drop = FALSE]
   
   # Four gene trehalose insertion from pan genome matrix
   four_gene_insertion <- 
