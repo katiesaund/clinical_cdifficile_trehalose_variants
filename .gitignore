@@ -4,6 +4,7 @@ SNP_matrix.tsv
 *.png
 *.jpg
 */data/outputs/*
+/data/outputs/
 <<<<<<< HEAD
 SNP_matrix.tsv
 =======
