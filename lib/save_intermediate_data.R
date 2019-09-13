@@ -159,7 +159,7 @@ save_data_for_tre_analysis <- function(out_group,
   keepers <- keepers[ -which(keepers[ , 1] == out_group), ]
   pangenome <- format_matrix(pangenome, keepers)
   
-  # Subset SNPs to only trehalose relevant genes (TreR, CD630_30900)
+  # Subset SNPs to only coding SNPs in trehalose gene (TreR, CD630_30900)
   # Then subset to only desired isolates. 
   treR_snps <- snp[grep("locus_tag=CD630_30900 ", rownames(snp)), 
                    , 
@@ -236,6 +236,34 @@ save_data_for_tre_analysis <- function(out_group,
   colnames(metadata)[which(colnames(metadata) == "ERIN_ID")] <- "ID"
   
   metadata <- metadata %>% select(-PSM_ID)
+  
+  # Add a column to metadata that says if the strata should be included in 
+  # analysis or not. This needs to be added because the sequencing project
+  # failed to sequenced several cases, so their strata were destroyed. 
+  # These isolates will be included in the metadata file because we have the 
+  # information, but excluded from any down stream analysis / plots. 
+  
+  # Now only work with "good strata"
+  # Controls / case stats
+  strata_info <-
+    metadata %>% 
+    filter(WGS_performed == 1) %>% 
+    select(Severe_Outcome, Stratum, ID) %>% 
+    group_by(Stratum) %>% 
+    mutate("case_in_stratum" = sum(Severe_Outcome == 1), 
+           "ctrl_in_stratum" = sum(Severe_Outcome == 0)) 
+  good_strata <- strata_info %>% filter(case_in_stratum == 1 & ctrl_in_stratum > 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
+  bad_strata <- strata_info %>% filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
+  excluded_isolates <- metadata %>% filter(Stratum %in% bad_strata) %>% select(ID) %>% unlist %>% unname %>% unique()
+
+  metadata <- metadata %>% mutate(Stratum_complete = Stratum %in% good_strata)  
+  
+  # Modify tree to have only good strata
+  tree <- drop.tip(tree, excluded_isolates)
+  if (Ntip(tree) != sum(metadata$Stratum_complete & metadata$WGS_performed == 1)) {
+    stop("Wrong number of tree tips")
+  }
+  
   # Save tree  
   write.tree(tree, 
              file = paste0("../data/outputs/", Sys.Date(), "_trehalose.tree"))
@@ -251,20 +279,6 @@ save_data_for_tre_analysis <- function(out_group,
               row.names = FALSE)
   
   # Save metadata for Supplementary table 1
-  metadata <- 
-    metadata %>% 
-    select(-age, 
-           -gender..M.0.F.1.,
-           -METS, 
-           -concurrentabx, 
-           -Lowest_SBP, 
-           -highcreat,
-           -highbili,
-           -WBC,
-           -Duplicated_Patient,
-           -Missing_Model_Data,
-           -Duplicated_Patient_No_Missing_Info)
-  
   write.table(metadata, 
               file = paste0("../data/outputs/", 
                             Sys.Date(), 

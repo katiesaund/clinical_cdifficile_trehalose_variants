@@ -122,7 +122,6 @@ generate_stats <- function(metadata_path){
                filter(WGS_performed == 1, metadata$Severe_Outcome == 0)))
   
   # Now only work with "good strata"
-  print("Below only with strata with at least 1 control and 1 case")
   strata_info <- 
     case_ctrl_stat %>% 
     group_by(Stratum) %>% 
@@ -130,7 +129,13 @@ generate_stats <- function(metadata_path){
            "ctrl_in_stratum" = sum(Severe_Outcome == 0)) 
   good_strata <- strata_info %>% filter(case_in_stratum == 1 & ctrl_in_stratum > 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
   bad_strata <- strata_info %>% filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
+  excluded_isolates <- strata_info %>% filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% ungroup() %>%  select(ID) %>% unlist %>% unname %>% unique()
+  Print("Strata excluded because strata didn't have cases:")
+  print(bad_strata)
+  Print("Isolates excluded because strata didn't have cases:")
+  print(excluded_isolates)
   
+  print("Below only with strata with at least 1 control and 1 case")
   metadata <- metadata %>% 
     filter(Stratum %in% good_strata)
   # Number of samples 

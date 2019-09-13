@@ -27,7 +27,7 @@ model_variables <-
 create_risk_scores_and_strata(model_variables)
 
 # Format additional input data necessary for analysis 
-outgroup <- "ERR232398"
+out_group <- "ERR232398"
 keeper_path <- 
   "../data/inputs/key.csv"
 tree_path <- "../data/inputs/input_tree.tree" 
@@ -36,7 +36,7 @@ pan_path <- "../data/inputs/gene_presence_absence.Rtab"
 
 model_path <- paste0("../data/outputs/", Sys.Date(), "_severity_model.tsv")
 
-save_data_for_tre_analysis(outgroup, 
+save_data_for_tre_analysis(out_group, 
                            keeper_path,
                            tree_path, 
                            snp_path, 
