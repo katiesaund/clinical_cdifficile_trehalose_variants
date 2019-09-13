@@ -236,29 +236,31 @@ generate_imputed_data <- function(variant_data, n_perm, n_per_ribo, case_or_ctrl
 #'   data for the non-sequenced isolates. This allows the analysis in the later
 #'   functions to run tests on columns. 
 #'
-#' @param var_data Tibble. Metadata. Isolates in rows. 
-#' @param n_perm Number. Number of imputations performed.
-#' @param imp_mat Tibble. Imputed data. Each rows is an isolate (names in ID 
+#' @param original_data Tibble. Metadata. Isolates in rows. The whole 1144 of 
+#'   the original cohort. 
+#' @param matched_seq_data Tibble. Metadata. Isolates in rows. Only data that 
+#'   were in complete strata (matched) and sequenced. 
+#' @param num_perm Number. Number of imputations performed.
+#' @param all_data Tibble. Imputed data. Each rows is an isolate (names in ID 
 #'   column). Other columns correspond to imputations. 
 #'
 #' @return var_data Tibble with imputed and observed variant data joined into 
 #'   one tibble. 
 #' @noRd
-join_imputed_to_seq <- function(var_data, n_perm, imp_mat){
+join_imputed_to_seq <- function(original_data, matched_seq_data, num_perm, imp_mat){
   temp_seq_var <- 
-    var_data %>% 
-    filter(WGS_performed == 1, Stratum_complete == 1) %>%  
+    matched_seq_data %>% 
     select(c(ID, C171S_L172I_or_insertion))
   temp_seq_var <- 
     cbind(temp_seq_var, 
-          replicate(n_perm - 1, temp_seq_var$C171S_L172I_or_insertion))
+          replicate(num_perm - 1, temp_seq_var$C171S_L172I_or_insertion))
   for (i in 2:ncol(temp_seq_var)) {
     colnames(imp_mat)[i] <- colnames(temp_seq_var)[i] <- paste0("imp", i - 1)
   }
   
   imp_and_seq_var <- rbind(imp_mat, temp_seq_var)
-  var_data <- full_join(var_data, imp_and_seq_var, by = "ID")
-  return(var_data)
+  all_data <- full_join(original_data, imp_and_seq_var, by = "ID")
+  return(all_data)
 } # end join_imputed_to_seq()
 
 #' join_imputed_insertion_to_seq
@@ -679,6 +681,10 @@ impute_variants <- function(metadata_path, num_perm, suffix = ""){
   # Select isolates to work with
   # Remove isolates with Ribotypes that are "other", "Unique" or NA
   # Remove isolates that are from duplicated patients
+  original_data <- variant_data
+  matched_seq_data <- 
+    variant_data %>% 
+    filter(WGS_performed == 1, Stratum_complete == 1)
   variant_data <- 
     variant_data %>% 
     filter(Duplicated_Patient == 0,
@@ -705,12 +711,14 @@ impute_variants <- function(metadata_path, num_perm, suffix = ""){
                           num_predicted_per_ribo_ctrl,
                           "ctrl")
   impute_var_all <- rbind(imputed_var_case, imputed_var_ctrl)
-  variant_data <- join_imputed_to_seq(variant_data, num_perm, impute_var_all)
-  fe_results <- calculate_FE(variant_data, num_perm, suffix)
+  
+  imputed_and_matched <- 
+    join_imputed_to_seq(original_data, matched_seq_data, num_perm, impute_var_all)
+  fe_results <- calculate_FE(imputed_and_matched, num_perm, suffix)
   fe_summary <- summarize_FE_results(fe_results, suffix)
-  logit_results <- calculate_logit(variant_data)
+  logit_results <- calculate_logit(imputed_and_matched)
   summarize_logit_results(logit_results, "_risk_score")
-  describe_imputation_cohort(variant_data, suffix)
+  describe_imputation_cohort(imputed_and_matched, suffix)
 } # end impute_variants()
 
 
