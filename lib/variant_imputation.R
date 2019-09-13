@@ -88,13 +88,6 @@ calculate_insertion_ratio_by_ribo <- function(variant_data){
   return(obs_tre_var_by_ribo)
 } # end calculate_insertion_ratio_by_ribo()
 
-# Deprecated function
-# convert_other_na_unique_ribo_to_other <- function(df){
-#  df$Ribotype[df$Ribotype %in% c("other", "Unique")] <- "misc"
-#  df$Ribotype[is.na(df$Ribotype)] <- "misc"
-#  return(df)
-#} # end calculate_variant_ratio_by_ribo()
-
 #' drop_ribo_absent_from_WGS
 #' Remove those ribotypes from consideration which were never sequenced, because 
 #'   their presence/absence cannot be calculated and therefore cannot be 
@@ -204,7 +197,7 @@ generate_imputed_data <- function(variant_data, n_perm, n_per_ribo){
   perm_imputed_data <- matrix(0, nrow = num_no_wgs_samples, ncol = n_perm)
   row.names(perm_imputed_data) <- non_sequenced$ID
   set.seed(1)
-  for (ribo in 1:num_no_wgs_ribo){
+  for (ribo in 1:num_no_wgs_ribo) {
     curr_ribo <- unique(n_per_ribo$Ribotype)[ribo]
     num_isolates <- 
       n_per_ribo %>% 
@@ -219,7 +212,7 @@ generate_imputed_data <- function(variant_data, n_perm, n_per_ribo){
       unlist() %>% 
       unname()
     
-    for (j in 1:n_perm){
+    for (j in 1:n_perm) {
       ids_with_variants <- 
         sample(x = curr_ids, size = as.numeric(num_isolates), replace = FALSE)
       indices_with_variants <- 
@@ -253,7 +246,7 @@ generate_imputed_insertion <- function(variant_data, n_perm, n_per_ribo){
   perm_imputed_data <- matrix(0, nrow = num_no_wgs_samples, ncol = n_perm)
   row.names(perm_imputed_data) <- non_sequenced$ID
   set.seed(1)
-  for (ribo in 1:num_no_wgs_ribo){
+  for (ribo in 1:num_no_wgs_ribo) {
     curr_ribo <- unique(n_per_ribo$Ribotype)[ribo]
     num_isolates <- 
       n_per_ribo %>% 
@@ -268,7 +261,7 @@ generate_imputed_insertion <- function(variant_data, n_perm, n_per_ribo){
       unlist() %>% 
       unname()
     
-    for (j in 1:n_perm){
+    for (j in 1:n_perm) {
       ids_with_variants <- 
         sample(x = curr_ids, size = as.numeric(num_isolates), replace = FALSE)
       indices_with_variants <- 
@@ -396,7 +389,7 @@ calculate_FE <- function(var_data, n_perm, suffix = ""){
   
   FE_results <- matrix(NA, ncol = 4, nrow = n_perm)
   colnames(FE_results) <- c("OR", "95% CI (lower)", "95% CI (upper)", "P-value")
-  for (i in 1:n_perm){
+  for (i in 1:n_perm) {
     temp_col <- paste0("imp", i)
     temp_fe <- 
       exact2x2(var_data$Severe_Outcome, var_data[[as.character(temp_col)]])
@@ -483,6 +476,158 @@ describe_imputation_cohort <- function(final_data, suffix = ""){
   sink()
 } # end describe_imputation_cohort()
 
+#' Title
+#'
+#' @param var_dat 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+calculate_logit <- function(var_dat){
+  # Rearrange code to have only the imputed variants and the necessary columns
+  model_input <- var_dat %>% select(paste0("imp", 1:num_perm), 
+                                    c("ID", 
+                                      "Propensity_Score", 
+                                      "Ribotype", 
+                                      "Severe_Outcome", 
+                                      "WGS_performed", 
+                                      "Duplicated_Patient", 
+                                      "C171S_L172I_or_insertion"))
+  # Drop isolates without a risk score
+  model_input <- model_input %>% filter(!is.na(Propensity_Score))
+  
+  # Initialize data objects
+  unadjusted_models <- rep(list(NULL), num_perm)
+  imputation_index <- 1:num_perm
+  
+  # Compute logisitic regression based on variant and propensity score 
+  for (i in imputation_index) {
+    unadjusted_models[[i]] <- 
+      glm(formula = Severe_Outcome ~ model_input[ , i, drop = TRUE] + 
+            Propensity_Score, 
+          data = model_input, 
+          family = "binomial")
+  }
+  
+  # Information stored in logit model: 
+  # coef = logs odd ratio
+  # exp(coef) = odds ratio
+  # 95%CI = exp(confint(model))
+  
+  # Save logit results in a model results
+  model_results <- matrix(NA, ncol = 5, nrow = num_perm)
+  colnames(model_results) <- 
+    c("Variant", "OR", "95% CI (lower)", "95% CI (upper)", "P-value")
+  for (m in imputation_index) {
+    model_results[m, 1] <- colnames(model_input)[m]
+    model_results[m, 2] <-
+      format(round(exp(unadjusted_models[[m]][]$coefficients[2]), 2), 
+             nsmall = 2)
+    model_results[m, 3] <- 
+      format(round(exp(confint(unadjusted_models[[m]])[2, 1]), 2), 
+             nsmall = 2)
+    model_results[m, 4] <- 
+      format(round(exp(confint(unadjusted_models[[m]])[2, 2]), 2),
+             nsmall = 2)
+    model_results[m, 5] <- 
+      format(round(coef(summary(unadjusted_models[[m]]))[2 ,'Pr(>|z|)'], 2), 
+             nsmall = 2)
+  }
+  
+  # Order results by increasing OR
+  model_results <- as_tibble(model_results)
+  class(model_results$OR) <- "numeric"
+  model_results <- model_results %>% arrange(OR)
+  
+  # Save table 
+  write_tsv(x = model_results, 
+            path = paste0("../data/outputs/", 
+                          Sys.Date(), 
+                          "_logit_with_score_imputation.tsv"))
+  
+  # Note: I ploted the OR with confidence intervals, but as there are so many 
+  #       it was useless / hard to read
+  
+  # The plot below is useless because there are too many imputed variables
+  # model_results <- as_tibble(model_results)
+  # model_results$OR <- as.numeric(model_results$OR)
+  # model_results$`95% CI (lower)` <- as.numeric(model_results$`95% CI (lower)`)
+  # model_results$`95% CI (upper)` <- as.numeric(model_results$`95% CI (upper)`)
+  # model_results$`P-value` <- as.numeric(model_results$`P-value`)
+  # 
+  # level_order <- factor(model_results$Variant, level = model_results$Variant)
+  # 
+  # 
+  # big_model_plot <- model_results %>% arrange(OR) %>% 
+  #   ggplot(mapping = aes(x = level_order, y = OR)) + 
+  #   geom_point() + 
+  #   geom_errorbar(aes(ymax = `95% CI (upper)`, ymin = `95% CI (lower)`)) + 
+  #   theme_bw() + 
+  #   geom_abline(slope = 0, intercept = 1, color = "red") + 
+  #   coord_flip() +
+  #   xlab("TreR amino acid substitution") + 
+  #   ylab("Odds Ratio + 95% CI") + 
+  #   theme(axis.text.x = element_text(size = rel(3), colour = "black"), 
+  #         axis.text.y = element_text(size = rel(0), color = "black"), 
+  #         axis.title = element_text(size = rel(2)))
+  # 
+  # ggsave(big_model_plot, 
+  #        height = 40, 
+  #        width = 5, 
+  #        filename = paste0("../figures/", 
+  #                          Sys.Date(),
+  #                          "_logit_with_score_imputation.pdf"))
+  
+  plot_name <-  paste0("../figures/", 
+                       Sys.Date(),
+                       "_logit_with_score_imputation_OR_hist.pdf")
+  pdf(plot_name)
+  hist(model_results$OR, main = "Logit: Severe ~ Risk Score + Any Trehalose Variant", xlab = "OR", breaks = 20)
+  abline(v = 1.0, col = "red")
+  dev.off()
+  
+  return(model_results)
+} # end calculate_logit()
+
+#' summarize_logit_results
+#'
+#' @param logit_results 
+#' @param suffix 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+summarize_logit_results <- function(logit_results, suffix = ""){
+  or_summary <- summary(logit_results$OR)
+  class(logit_results$`P-value`) <- "numeric"
+  p_summary <- summary(logit_results$`P-value`)
+  logit_summary <- matrix(NA, ncol = 6, nrow = 1)
+  colnames(logit_summary) <- c("Median OR",
+                               "Min. OR",
+                               "Max OR",
+                               "Median P-value",
+                               "Min. P-value",
+                               "Max P-value")
+  logit_summary <- as_tibble(logit_summary)
+  logit_summary$`Median OR`[1] <- format(round(or_summary[3], 2), nsmall = 2)
+  logit_summary$`Min. OR`[1] <- format(round(or_summary[1], 2), nsmall = 2)
+  logit_summary$`Max OR`[1] <- format(round(or_summary[6], 2), nsmall = 2)
+  logit_summary$`Median P-value`[1] <- format(round(p_summary[3], 2), nsmall = 2)
+  logit_summary$`Min. P-value`[1] <- format(round(p_summary[1], 2), nsmall = 2)
+  logit_summary$`Max P-value`[1] <- format(round(p_summary[6], 2), nsmall = 2)
+  
+  write_tsv(logit_summary, 
+            path = paste0("../data/outputs/", 
+                          Sys.Date(), 
+                          "_imputation_logit_results", 
+                          suffix, 
+                          ".tsv"))
+  return(logit_summary)
+} # end summarize_logit_results()
+
+
 #' impute_variants
 #' Wrapper function to perform trehalose utilization variant imputation on 
 #'   isolates for which there is ribotype information but not sequence data. 
@@ -522,5 +667,11 @@ impute_variants <- function(metadata_path, num_perm, suffix = ""){
   variant_data <- join_imputed_to_seq(variant_data, num_perm, imputed_var)
   fe_results <- calculate_FE(variant_data, num_perm, suffix)
   fe_summary <- summarize_FE_results(fe_results, suffix)
+  
+  logit_results <- calculate_logit(variant_data)
+  summarize_logit_results(logit_results, "_risk_score")
+  
   describe_imputation_cohort(variant_data, suffix)
 } # end impute_variants()
+
+
