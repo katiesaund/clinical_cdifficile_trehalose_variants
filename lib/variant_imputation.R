@@ -441,7 +441,7 @@ describe_imputation_cohort <- function(final_data, suffix = ""){
     nrow()
   
   # Imputed + Sequenced FE
-  # Imputed plus sequenced results
+  # Imputed plus all sequenced results
   FE_all <- final_data %>% 
     filter(!is.na(imp1)) 
   FE_all_case <- 
