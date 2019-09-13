@@ -20,13 +20,13 @@ run_clogit_models <- function(metadata_path){
   metadata <- read_tsv(metadata_path, 
                        col_names = TRUE)
   
-  # Subset to only those samples that had WGS performed and were matched into a 
-  #   stratum. 
+  # Subset to only those samples that had WGS performed, were matched into a 
+  #   stratum, and the stratum is complete.
   # Subset metadata to only IDs, predictor variables, response variable, 
   #   stratum, ribotype. 
   
   model_input <- 
-    metadata %>% filter(WGS_performed == 1, !is.na(Stratum))
+    metadata %>% filter(WGS_performed == 1, Stratum_complete == 1)
   col_to_drop <- c("treA2", 
                    "ptsT", 
                    "treX", 
@@ -45,7 +45,8 @@ run_clogit_models <- function(metadata_path){
                    "Risk_Score",           
                    "Duplicated_Patient_No_Missing_Info", 
                    "Unmatched", 
-                   "WGS_performed")
+                   "WGS_performed", 
+                   "Stratum_complete")
   model_input <- 
     model_input[ , !(colnames(model_input) %in% col_to_drop), drop = FALSE]
   model_input <- 
@@ -113,10 +114,10 @@ run_clogit_models <- function(metadata_path){
   my_theme <- 
     ttheme_minimal(base_size = 11, 
                    padding = unit(c(6, 1), "mm"),
-                   core =list(fg_params=list(hjust=1, x=0.9), 
+                   core = list(fg_params = list(hjust = 1, x = 0.9), 
                               bg_params = list(fill = c("grey95", "white"))),
-                   rowhead=list(fg_params=list(hjust=0, x=0)), 
-                   colhead = list(fg_params=list()))
+                   rowhead = list(fg_params = list(hjust = 0, x = 0)), 
+                   colhead = list(fg_params = list()))
   table_plot <- tableGrob(model_results, theme = my_theme)
   pdf(paste0("../figures/", 
              Sys.Date(), 
@@ -132,7 +133,7 @@ run_clogit_models <- function(metadata_path){
   table_plot <- tableGrob(smaller_model, theme = my_theme)
   pdf(paste0("../figures/",
              Sys.Date(), 
-             "_clogit_only_four_trehalose_variants_table.pdf"))
+             "_clogit_only_trehalose_variants_of_interest_table.pdf"))
   grid.draw(table_plot)
   dev.off()
   
@@ -144,5 +145,5 @@ run_clogit_models <- function(metadata_path){
   write_tsv(as_tibble(smaller_model), 
             paste0("../data/outputs/", 
                    Sys.Date(), 
-                   "_clogit_only_four_trehalose_variants.tsv"))
+                   "_clogit_only_trehalose_variants_of_interest.tsv"))
 } # end run_clogit_models()
