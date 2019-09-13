@@ -116,6 +116,9 @@ generate_stats <- function(metadata_path){
   print("Number of isolates with a propensity score")
   print(sum(!is.na(metadata$Risk_Score)))
   
+  print("Number of isolates with placed in a stratum")
+  print(sum(!is.na(metadata$Stratum)))
+  
   # Number of isolates with WGS sequencing
   print("Size of start matched set")
   print(sum(metadata$WGS_performed))

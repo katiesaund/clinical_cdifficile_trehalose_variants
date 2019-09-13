@@ -340,6 +340,9 @@ calculate_FE <- function(var_data, n_perm, suffix = ""){
     #           C171S_L172I_or_insertion))
     filter(!is.na(imp1))
   
+  print("num in fe imputed+matched")
+  print(dim(var_data))
+  
   FE_results <- matrix(NA, ncol = 4, nrow = n_perm)
   colnames(FE_results) <- c("OR", "95% CI (lower)", "95% CI (upper)", "P-value")
   for (i in 1:n_perm) {
@@ -351,7 +354,6 @@ calculate_FE <- function(var_data, n_perm, suffix = ""){
     FE_results[i, 3] <- temp_fe$conf.int[2]
     FE_results[i, 4] <- temp_fe$p.value
   }
-  FE_results[ , 4] <- p.adjust(FE_results[ , 4])
   return(FE_results)
 } # end calculate_FE()
 
