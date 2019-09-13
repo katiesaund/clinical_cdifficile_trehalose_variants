@@ -252,11 +252,35 @@ save_data_for_tre_analysis <- function(out_group,
     group_by(Stratum) %>% 
     mutate("case_in_stratum" = sum(Severe_Outcome == 1), 
            "ctrl_in_stratum" = sum(Severe_Outcome == 0)) 
-  good_strata <- strata_info %>% filter(case_in_stratum == 1 & ctrl_in_stratum > 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
-  bad_strata <- strata_info %>% filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
-  excluded_isolates <- metadata %>% filter(Stratum %in% bad_strata) %>% select(ID) %>% unlist %>% unname %>% unique()
+  complete_strata <- 
+    strata_info %>% 
+    filter(case_in_stratum == 1 & ctrl_in_stratum > 0) %>% 
+    ungroup() %>%  
+    select(Stratum) %>% 
+    unlist %>% 
+    unname %>% 
+    unique()
+  incomplete_strata <- 
+    strata_info %>% 
+    filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% 
+    ungroup() %>%  
+    select(Stratum) %>% 
+    unlist %>% 
+    unname %>% 
+    unique()
+  excluded_isolates <- 
+    metadata %>% 
+    filter(Stratum %in% incomplete_strata) %>%
+    select(ID) %>%
+    unlist %>% 
+    unname %>% 
+    unique()
 
-  metadata <- metadata %>% mutate(Stratum_complete = Stratum %in% good_strata)  
+  # Add column to keep track of which strata are complete (have case & controls)
+  metadata <- metadata %>% mutate(Stratum_complete = Stratum %in% complete_strata)  
+  
+  # Note: the data to include in analyses is metadata$Stratum_complete &
+  # metadata$WGS_performed == 1
   
   # Modify tree to have only good strata
   tree <- drop.tip(tree, excluded_isolates)

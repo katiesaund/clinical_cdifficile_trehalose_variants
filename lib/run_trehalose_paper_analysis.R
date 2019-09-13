@@ -12,7 +12,7 @@ library(seqinr)
 # Functions -------------------------------------------------------------------# 
 source("../lib/create_risk_scores_and_strata.R")
 source("../lib/save_intermediate_data.R")
-source("../lib/generate_cohort_stats.R")
+source("../lib/generate_descriptive_stats.R")
 source("../lib/save_r_session_log.R")
 source("../lib/plot_tree.R")
 source("../lib/clogit.R")

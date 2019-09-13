@@ -7,18 +7,23 @@
 #'
 #' @noRd
 print_ribo_stats <- function(metadata, rbtyp){
-  print(paste0("Num ", rbtyp, " in sequenced cohort"))
+  if (sum(metadata$WGS_performed) != nrow(metadata)) {
+    stop("Assumes all included isolates were sequenced")
+  }
+  if (sum(metadata$Stratum_complete) != nrow(metadata)) {
+    stop("Assumes all included isolates from complete strata")
+  }
+  
+  print(paste0("Num ", rbtyp, " in matched, case-control"))
   print(nrow(metadata %>% 
-               filter(WGS_performed == 1, Ribotype == rbtyp)))
-  print(paste0("Num ", rbtyp, " in sequenced cases"))
+               filter(Ribotype == rbtyp)))
+  print(paste0("Num ", rbtyp, " in matched cases"))
   print(nrow(metadata %>% 
-               filter(WGS_performed == 1, 
-                      metadata$Severe_Outcome == 1, 
+               filter(Severe_Outcome == 1, 
                       Ribotype == rbtyp)))
-  print(paste0("Num ", rbtyp, " in sequenced controls"))
+  print(paste0("Num ", rbtyp, " in matched controls"))
   print(nrow(metadata %>% 
-               filter(WGS_performed == 1, 
-                      metadata$Severe_Outcome == 0, 
+               filter(Severe_Outcome == 0, 
                       Ribotype == rbtyp)))
   
 } # end print_ribo_stats()
@@ -37,6 +42,13 @@ print_ribo_stats <- function(metadata, rbtyp){
 #' @noRd
 print_phylogenetic_distribution <- 
   function(metadata, variant_name, ribotype_num, num_ribo_in_matched){
+  if (sum(metadata$WGS_performed) != nrow(metadata)) {
+    stop("Assumes all included isolates were sequenced")
+  }
+  if (sum(metadata$Stratum_complete) != nrow(metadata)) {
+    stop("Assumes all included isolates from complete strata")
+  }
+    
   print(paste0(variant_name, " distribution"))
   print(paste0(ribotype_num, 
                " with ", 
@@ -45,21 +57,18 @@ print_phylogenetic_distribution <-
                ribotype_num))
   variant_in_ribo  <- 
     metadata %>% 
-    filter(Ribotype == ribotype_num, 
-           WGS_performed == TRUE) %>% 
+    filter(Ribotype == ribotype_num) %>% 
     select(variant_name)
   print(paste0(sum(variant_in_ribo[ , 1]), "/", nrow(variant_in_ribo)))
   
   print(paste0("All isolates with ", variant_name, " / total isolates"))
   all_with_variant <- 
     metadata %>% 
-    filter(WGS_performed == TRUE) %>% 
     select(variant_name)
   print(paste0(sum(all_with_variant[ , 1]), "/", nrow(all_with_variant)))
   
   ribotypes_with_variant <- 
     metadata %>% 
-    filter(WGS_performed == TRUE) %>% 
     select(variant_name, Ribotype)
   ribotypes_with_variant <- 
     ribotypes_with_variant[ribotypes_with_variant[ ,  1] == 1, ]
@@ -122,40 +131,41 @@ generate_stats <- function(metadata_path){
                filter(WGS_performed == 1, metadata$Severe_Outcome == 0)))
   
   # Now only work with "good strata"
-  strata_info <- 
-    case_ctrl_stat %>% 
-    group_by(Stratum) %>% 
-    mutate("case_in_stratum" = sum(Severe_Outcome == 1), 
-           "ctrl_in_stratum" = sum(Severe_Outcome == 0)) 
-  good_strata <- strata_info %>% filter(case_in_stratum == 1 & ctrl_in_stratum > 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
-  bad_strata <- strata_info %>% filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% ungroup() %>%  select(Stratum) %>% unlist %>% unname %>% unique()
-  excluded_isolates <- strata_info %>% filter(case_in_stratum != 1 | ctrl_in_stratum == 0) %>% ungroup() %>%  select(ID) %>% unlist %>% unname %>% unique()
-  Print("Strata excluded because strata didn't have cases:")
-  print(bad_strata)
-  Print("Isolates excluded because strata didn't have cases:")
-  print(excluded_isolates)
+  print("Strata excluded because strata didn't have cases:")
+  print(metadata %>% 
+          filter(metadata$Stratum_complete == FALSE & metadata$WGS_performed == 1) %>% 
+          select(Stratum) %>% 
+          unique() %>%
+          unname() %>% 
+          unlist())
+  print("Isolates excluded because strata didn't have cases:")
+  print(metadata %>% 
+          filter(metadata$Stratum_complete == FALSE & metadata$WGS_performed == 1) %>% 
+          select(ID) %>% 
+          unique() %>%
+          unname() %>% 
+          unlist())
   
   print("Below only with strata with at least 1 control and 1 case")
   metadata <- metadata %>% 
-    filter(Stratum %in% good_strata)
+    filter(metadata$Stratum_complete == TRUE & metadata$WGS_performed == 1)
   # Number of samples 
   print("Number of isolates sequenced and included in matched analyses")
-  print(sum(metadata$WGS_performed == 1))
+  print(nrow(metadata))
   
   # Number of cases
   print("Number of cases")
   print(nrow(metadata %>% 
-               filter(WGS_performed == 1, metadata$Severe_Outcome == 1)))
+               filter(metadata$Severe_Outcome == 1)))
   
   # Number of controls
   print("Number of controls")
   print(nrow(metadata %>% 
-               filter(WGS_performed == 1, metadata$Severe_Outcome == 0)))
+               filter(metadata$Severe_Outcome == 0)))
   
   # Controls / case stats
   case_ctrl_stat <-
     metadata %>% 
-    filter(WGS_performed == 1) %>% 
     select(Severe_Outcome, Stratum)
   
   ctrl_stat <- 
@@ -181,14 +191,10 @@ generate_stats <- function(metadata_path){
   print_ribo_stats(metadata, "078-126")
 
   # number of ribotypes in the sequenced, matched cohort
-  matched_cohort <- 
-    metadata %>% 
-    filter(WGS_performed == 1)
-  
   num_ribo_in_matched <- 
-    length(unique(matched_cohort$Ribotype)) + 
-    sum(matched_cohort$Ribotype == "Unique", na.rm = TRUE) + 
-    sum(is.na(matched_cohort$Ribotype), na.rm = FALSE) -
+    length(unique(metadata$Ribotype)) + 
+    sum(metadata$Ribotype == "Unique", na.rm = TRUE) + 
+    sum(is.na(metadata$Ribotype), na.rm = FALSE) -
     2 # Don't count NA and unique twice: also in length(unique(Ribotype))
   
   # Phylogenetic distribution
