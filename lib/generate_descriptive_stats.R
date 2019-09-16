@@ -7,13 +7,9 @@
 #'
 #' @noRd
 print_ribo_stats <- function(metadata, rbtyp){
-  if (sum(metadata$WGS_performed) != nrow(metadata)) {
-    stop("Assumes all included isolates were sequenced")
+  if (sum(metadata$WGS_performed & metadata$Stratum_complete) != nrow(metadata)) {
+    stop("Assumes all included isolates were sequenced and from complete strata")
   }
-  if (sum(metadata$Stratum_complete) != nrow(metadata)) {
-    stop("Assumes all included isolates from complete strata")
-  }
-  
   print(paste0("Num ", rbtyp, " in matched, case-control"))
   print(nrow(metadata %>% 
                filter(Ribotype == rbtyp)))
@@ -42,13 +38,10 @@ print_ribo_stats <- function(metadata, rbtyp){
 #' @noRd
 print_phylogenetic_distribution <- 
   function(metadata, variant_name, ribotype_num, num_ribo_in_matched){
-  if (sum(metadata$WGS_performed) != nrow(metadata)) {
-    stop("Assumes all included isolates were sequenced")
+  if (sum(metadata$WGS_performed & metadata$Stratum_complete) != nrow(metadata)) {
+    stop("Assumes all included isolates were sequenced and from complete strata")
   }
-  if (sum(metadata$Stratum_complete) != nrow(metadata)) {
-    stop("Assumes all included isolates from complete strata")
-  }
-    
+
   print(paste0(variant_name, " distribution"))
   print(paste0(ribotype_num, 
                " with ", 
@@ -107,12 +100,9 @@ generate_stats <- function(metadata_path){
   
   # Number of total ribotypes (all 1144 cases)
   print("Number of ribotypes (N=1144)")
-  print(length(unique(metadata$Ribotype)) + 
-                 sum(metadata$Ribotype == "Unique", na.rm = TRUE) + 
-                 sum(is.na(metadata$Ribotype), na.rm = FALSE) -
-          2) # Don't count NA and unique twice: also in length(unique(Ribotype))
-  # Number of isolates given a propensity score
+  print(length(unique(metadata$Ribotype))) 
   
+  # Number of isolates given a propensity score
   print("Number of isolates with a propensity score")
   print(sum(!is.na(metadata$Risk_Score)))
   
@@ -120,7 +110,7 @@ generate_stats <- function(metadata_path){
   print(sum(!is.na(metadata$Stratum)))
   
   # Number of isolates with WGS sequencing
-  print("Size of start matched set")
+  print("Number of isolates in a stratum that were sequenced")
   print(sum(metadata$WGS_performed))
   
   # Number of cases
@@ -136,14 +126,14 @@ generate_stats <- function(metadata_path){
   # Now only work with "good strata"
   print("Strata excluded because strata didn't have cases:")
   print(metadata %>% 
-          filter(metadata$Stratum_complete == FALSE & metadata$WGS_performed == 1) %>% 
+          filter(metadata$Stratum_complete == 0 & metadata$WGS_performed == 1) %>% 
           select(Stratum) %>% 
           unique() %>%
           unname() %>% 
           unlist())
   print("Isolates excluded because strata didn't have cases:")
   print(metadata %>% 
-          filter(metadata$Stratum_complete == FALSE & metadata$WGS_performed == 1) %>% 
+          filter(metadata$Stratum_complete == 0 & metadata$WGS_performed == 1) %>% 
           select(ID) %>% 
           unique() %>%
           unname() %>% 
@@ -151,10 +141,24 @@ generate_stats <- function(metadata_path){
   
   print("Below only with strata with at least 1 control and 1 case")
   metadata <- metadata %>% 
-    filter(metadata$Stratum_complete == TRUE & metadata$WGS_performed == 1)
+    filter(metadata$Stratum_complete == 1 & metadata$WGS_performed == 1)
+  
   # Number of samples 
-  print("Number of isolates sequenced and included in matched analyses")
+  print("Number of isolates sequenced, in complete strata, and therefore included in the matched analyses")
   print(nrow(metadata))
+  
+  print("Number of ribotypes for which samples were sequenced and in complete strata, and therefore included in the matched analyses")
+  ribos <- unique(metadata$Ribotype)
+  num_ribos <- length(ribos)
+  print(num_ribos)
+  
+  print("All ribotypes in matched & sequenced")
+  print(ribos)
+  
+  print("Number of ribotypes minus NA, unique, and other")
+  ribos <- unique(metadata$Ribotype)
+  ribos <- ribos[!ribos %in% c(NA, "Unique", "other")]
+  print(length(unique(ribos)))
   
   # Number of cases
   print("Number of cases")
@@ -192,26 +196,19 @@ generate_stats <- function(metadata_path){
   print_ribo_stats(metadata, "027")
   print_ribo_stats(metadata, "053-160")
   print_ribo_stats(metadata, "078-126")
-
-  # number of ribotypes in the sequenced, matched cohort
-  num_ribo_in_matched <- 
-    length(unique(metadata$Ribotype)) + 
-    sum(metadata$Ribotype == "Unique", na.rm = TRUE) + 
-    sum(is.na(metadata$Ribotype), na.rm = FALSE) -
-    2 # Don't count NA and unique twice: also in length(unique(Ribotype))
   
   # Phylogenetic distribution
   print_phylogenetic_distribution(metadata, 
                                   "Cys171Ser", 
                                   "017", 
-                                  num_ribo_in_matched)
+                                  num_ribos)
   print_phylogenetic_distribution(metadata, 
                                   "Leu172Ile", 
                                   "027", 
-                                  num_ribo_in_matched)
+                                  num_ribos)
   print_phylogenetic_distribution(metadata, 
                                   "four_gene_insertion",
                                   "078-126", 
-                                  num_ribo_in_matched)
+                                  num_ribos)
   sink()
 } # end generate_stats()

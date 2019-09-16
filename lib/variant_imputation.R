@@ -462,7 +462,8 @@ calculate_logit <- function(var_dat, num_perm){
   model_input <- var_dat %>% select(paste0("imp", 1:num_perm), 
                                     c("Risk_Score", 
                                       "Severe_Outcome", 
-                                      "C171S_L172I_or_insertion"))
+                                      "C171S_L172I_or_insertion", 
+                                      "Imp_or_Obs"))
   # Drop isolates without a risk score or without variant data
   model_input <- model_input %>% filter(!is.na(Risk_Score), !is.na(Imp_or_Obs))
   
