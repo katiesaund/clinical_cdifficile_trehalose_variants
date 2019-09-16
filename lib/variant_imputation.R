@@ -4,13 +4,16 @@
 #'   L172I, or four gene insertion.) Return a tibble with the observed trehalose 
 #'   utilization variant ratio for each ribotype. Save a table for supplement
 #'   with information about ribotype-specific ratio for trehalose variant 
-#'   presence.
+#'   presence. Calculate the ratio by ribotype for controls based only on data
+#'   obtained from controls; similarly, only calculate the ratio by ribotype for
+#'   cases based on data obtained from cases. This is essential to keep with the
+#'   case-control study upon which this data is based.
 #' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
 #'   individual isolates and columns contain, among other info, trehalose
 #'   variants. 
 #' @param case_or_ctrl String. Either "case" or "control."
 #'
-#' @return obs_tre_var_by_ribo. The fraction of total samples that have the 
+#' @return obs_tre_var_by_ribo. The fraction of samples that have the 
 #'   C171S_L172I_or_insertion by ribotype. 
 #' @noRd
 calculate_variant_ratio_by_ribo <- function(variant_data, case_or_ctrl){
@@ -41,7 +44,8 @@ calculate_variant_ratio_by_ribo <- function(variant_data, case_or_ctrl){
   
   save_version <- obs_tre_var_by_ribo
   save_version$present_ratio <- save_version$present_ratio * 100
-  colnames(save_version)[2] <- "% of isolates with trehalose utilization variant"
+  colnames(save_version)[2] <- 
+    "% of isolates with trehalose utilization variant"
   write_tsv(save_version, 
             path = paste0("../data/outputs/", 
                           Sys.Date(), 
@@ -51,51 +55,6 @@ calculate_variant_ratio_by_ribo <- function(variant_data, case_or_ctrl){
             col_names = TRUE)
   return(obs_tre_var_by_ribo)
 } # end calculate_variant_ratio_by_ribo()
-
-#' calculate_insertion_ratio_by_ribo
-#' For each ribotype in the WGS'd cohort count what percent of the isolates from 
-#'   each ribotype has any of the three trehalose variants of interest (C171S, 
-#'   L172I, or four gene insertion.) Return a tibble with the observed trehalose 
-#'   utilization variant ratio for each ribotype. Save a table for supplement
-#'   with information about ribotype-specific ratio for trehalose variant 
-#'   presence.
-#' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
-#'   individual isolates and columns contain, among other info, trehalose
-#'   variants. 
-#'
-#' @return obs_tre_var_by_ribo. The fraction of total samples that have the 
-#'   four_gene_insertion by ribotype. 
-#' @noRd
-calculate_insertion_ratio_by_ribo <- function(variant_data){
-  obs_tre_var_by_ribo <- 
-    variant_data %>%
-    select(Ribotype, four_gene_insertion) %>% 
-    filter(!is.na(four_gene_insertion)) %>%
-    table() 
-  obs_tre_var_by_ribo <- 
-    cbind(obs_tre_var_by_ribo, rep(NA, nrow(obs_tre_var_by_ribo)) )
-  colnames(obs_tre_var_by_ribo) <-
-    c("tre_variant_absent", "tre_variant_present", "present_ratio")
-  obs_tre_var_by_ribo <- as_tibble(obs_tre_var_by_ribo, rownames = "Ribotype")
-  for (i in 1:nrow(obs_tre_var_by_ribo)) {
-    temp_num_in_ribo <-
-      sum(obs_tre_var_by_ribo$tre_variant_present[i] + 
-            obs_tre_var_by_ribo$tre_variant_absent[i])
-    obs_tre_var_by_ribo$present_ratio[i] <- 
-      obs_tre_var_by_ribo$tre_variant_present[i] / temp_num_in_ribo
-  }
-  obs_tre_var_by_ribo <- obs_tre_var_by_ribo %>% select(Ribotype, present_ratio)
-  
-  save_version <- obs_tre_var_by_ribo
-  save_version$present_ratio <- save_version$present_ratio * 100
-  colnames(save_version)[2] <- "% of isolates with trehalose insertion"
-  write_tsv(save_version, 
-            path = paste0("../data/outputs/", 
-                          Sys.Date(), 
-                          "_trehalose_insertion_prevalence_by_ribotype.tsv"), 
-            col_names = TRUE)
-  return(obs_tre_var_by_ribo)
-} # end calculate_insertion_ratio_by_ribo()
 
 #' drop_ribo_absent_from_matched_WGS
 #' Remove those ribotypes from consideration which were never sequenced, because 
