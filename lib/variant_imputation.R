@@ -347,9 +347,11 @@ summarize_model_results <- function(model_results, suffix = ""){
 #'   imputation steps. 
 #'
 #' @noRd
-describe_imputation_cohort <- function(final_data){
+describe_imputation_cohort <- function(final_data, num_perm){
   sequenced <- final_data %>% 
-    filter(Imp_or_Obs == "observed")
+    filter(Imp_or_Obs == "observed") %>% 
+    filter(!Ribotype %in% c("Unique", "other")) %>% 
+    filter(!is.na(Ribotype))
   imputed <- final_data %>% 
     filter(Imp_or_Obs == "imputed")
   
@@ -407,6 +409,9 @@ describe_imputation_cohort <- function(final_data){
               Sys.Date(), 
               "_imputation_descriptive_stats", 
               ".txt"))
+  print("Number of permutations")
+  print(num_perm)
+  
   print("Imputation cohort")
   print(paste0("Sequenced & Match N = ", n_seq_sample))
   print(paste0("Sequenced & Match Ribotype N = ", n_seq_ribo))
@@ -644,5 +649,5 @@ impute_variants <- function(metadata_path, num_perm){
   fe_results <- calculate_FE(imputed_and_matched)
   logit_results <- calculate_logit(imputed_and_matched, num_perm)
   logit_summary <- summarize_model_results(logit_results, "_logit_risk_score")
-  describe_imputation_cohort(imputed_and_matched)
+  describe_imputation_cohort(imputed_and_matched, num_perm)
 } # end impute_variants()
