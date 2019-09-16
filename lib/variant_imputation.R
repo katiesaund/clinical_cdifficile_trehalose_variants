@@ -57,9 +57,11 @@ calculate_variant_ratio_by_ribo <- function(variant_data, case_or_ctrl){
 } # end calculate_variant_ratio_by_ribo()
 
 #' drop_ribo_absent_from_matched_WGS
-#' Remove those ribotypes from consideration which were never sequenced, because 
-#'   their presence/absence cannot be calculated and therefore cannot be 
-#'   imputed.  
+#' Remove those ribotypes from consideration which had no isolates that were 
+#'   ever sequenced, because if there is no sequencing then the trehalose 
+#'   utilization variant presence/absence cannot be calculated. If that's not 
+#'   calculated then we cannot use those ribotypes for imputation of 
+#'   presence/absence.
 #'
 #' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
 #'   individual isolates and columns contain, among other info, ribotypes.
@@ -92,7 +94,10 @@ drop_ribo_absent_from_matched_WGS <- function(variant_data){
 #'   by ribotype in the sequenced cohort and the number of not sequenced 
 #'   isolates you have per ribotype, simply multiply these two numbers together 
 #'   to get the total number isolates that should be assigned to "presence" 
-#'   during the later imputation step. 
+#'   during the later imputation step. Only use control-dervied data for 
+#'   controls; similarly, only used case-derived data for cases. This is
+#'   essential to keep with the case-control study design upon which this data
+#'   is based.
 #'
 #' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
 #'   individual isolates and columns contain, among other info, ribotypes.
@@ -186,14 +191,13 @@ generate_imputed_data <- function(variant_data, n_perm, n_per_ribo, case_or_ctrl
 } # end generate_imputed_data()
 
 #' join_imputed_to_seq
-#' This function joines the imputed variant data to the observed variant data. 
-#'   Said another way, this function joins the non-sequenced data to the 
-#'   sequenced data. It does this by replicating the sequenced variant data 
-#'   n_perm times, then row binding the imputed data to this replicated and
-#'   sequenced data. At the end each column contains the observed (sequenced)
-#'   variant data for sequenced isolates and the imputed (non-sequenced) variant
-#'   data for the non-sequenced isolates. This allows the analysis in the later
-#'   functions to run tests on columns. 
+#' This function joins the imputed variant data to the observed variant data. 
+#'   Said another way, this function joins the non-matched data to the 
+#'   matched data. It does this by replicating the matched variant data 
+#'   n_perm times, then row-binding the imputed data to this replicated and
+#'   matched data. At the end each column contains the matched & sequenced
+#'   variant data and the imputed (non-matched) variant data. This format
+#'   allows the analysis in the later functions to run tests on columns. 
 #'
 #' @param original_data Tibble. Metadata. Isolates in rows. The whole 1144 of 
 #'   the original cohort. 
@@ -222,42 +226,6 @@ join_imputed_to_seq <- function(original_data, matched_seq_data, num_perm, imp_m
   return(all_data)
 } # end join_imputed_to_seq()
 
-#' join_imputed_insertion_to_seq
-#' This function joines the imputed variant data to the observed variant data. 
-#'   Said another way, this function joins the non-sequenced data to the 
-#'   sequenced data. It does this by replicating the sequenced variant data 
-#'   n_perm times, then row binding the imputed data to this replicated and
-#'   sequenced data. At the end each column contains the observed (sequenced)
-#'   variant data for sequenced isolates and the imputed (non-sequenced) variant
-#'   data for the non-sequenced isolates. This allows the FE test in the next
-#'   function to run tests on columns. 
-#'
-#' @param var_data Tibble. Metadata. Isolates in rows. 
-#' @param n_perm Number. Number of imputations performed.
-#' @param imp_mat Tibble. Imputed data. Each rows is an isolate (names in ID 
-#'   column). Other columns correspond to imputations. 
-#'
-#' @return var_data Tibble with imputed and observed variant data joined into 
-#'   one tibble. 
-#' @noRd
-join_imputed_insertion_to_seq <- function(var_data, n_perm, imp_mat){
-  temp_seq_var <- 
-    var_data %>% 
-    filter(WGS_performed == 1) %>%  
-    select(c(ID, four_gene_insertion))
-  temp_seq_var <- 
-    cbind(temp_seq_var, 
-          replicate(n_perm - 1, temp_seq_var$four_gene_insertion))
-  for (i in 2:ncol(temp_seq_var)) {
-    colnames(imp_mat)[i] <- colnames(temp_seq_var)[i] <- paste0("imp", i - 1)
-  }
-  
-  imp_and_seq_var <- rbind(imp_mat, temp_seq_var)
-  var_data <- full_join(var_data, imp_and_seq_var, by = "ID")
-  return(var_data)
-} # end join_imputed_insertion_to_seq()
-
-
 #' calculate_FE
 #' 1. For the sequenced data calculate the FE for only the sequenced variants. 
 #'   Save FE results. 2. For a tibble with the isolates in the rows and the 
@@ -267,29 +235,30 @@ join_imputed_insertion_to_seq <- function(var_data, n_perm, imp_mat){
 #'   combination of real (observed) supplemented with imputed trehalose 
 #'   utilization variants
 #' @param n_perm Number. Number of imputations performed.
-#' @param suffix Character. Description of cohort, optional. 
 #'
-#' @return FE_results. Matrix. Nrow = n_perm. Ncol = 4. Columsn describe FE 
+#' @return FE_results. Matrix. Nrow = n_perm. Ncol = 4. Columns describe FE 
 #'   results: "OR", "95% CI (lower)", "95% CI (upper)", and "P-value". 
 #' @noRd
-calculate_FE <- function(var_data, n_perm, suffix = ""){
+calculate_FE <- function(var_data, n_perm){
   # Sequenced, matched results
   seq_only <- var_data %>% filter(WGS_performed == 1, Stratum_complete == 1)
-  print("num in fe seq, matched")
-  print(dim(seq_only))
   seq_fe <- exact2x2(seq_only$Severe_Outcome, seq_only$C171S_L172I_or_insertion)
-  seq_results <- matrix(NA, ncol = 4, nrow = 1)
-  colnames(seq_results) <-
-    c("OR", "95% CI (lower)", "95% CI (upper)", "P-value")
+  seq_results <- matrix(NA, ncol = 5, nrow = 1)
+  colnames(seq_results) <- c("OR", 
+                             "95% CI (lower)", 
+                             "95% CI (upper)",
+                             "P-value", 
+                             "Number Samples Included")
   seq_results[1, 1] <- format(round(seq_fe$estimate, 2), nsmall = 2)
   seq_results[1, 2] <- format(round(seq_fe$conf.int[1], 2), nsmall = 2)
   seq_results[1, 3] <- format(round(seq_fe$conf.int[2], 2), nsmall = 2)
   seq_results[1, 4] <- format(round(seq_fe$p.value, 2), nsmall = 2)
+  seq_results[1, 5] <- nrow(seq_only)
   seq_results <- as_tibble(seq_results)
   write_tsv(seq_results, 
             path = paste0("../data/outputs/", 
                           Sys.Date(),
-                          "_FE_only_sequenced_results", suffix, ".tsv"))
+                          "_FE_only_sequenced_results.tsv"))
   
   # Imputed plus sequenced results
   var_data <- 
@@ -301,11 +270,12 @@ calculate_FE <- function(var_data, n_perm, suffix = ""){
     #           C171S_L172I_or_insertion))
     filter(!is.na(imp1))
   
-  print("num in fe imputed+matched")
-  print(dim(var_data))
-  
-  FE_results <- matrix(NA, ncol = 4, nrow = n_perm)
-  colnames(FE_results) <- c("OR", "95% CI (lower)", "95% CI (upper)", "P-value")
+  FE_results <- matrix(NA, ncol = 5, nrow = n_perm)
+  colnames(FE_results)  <- c("OR", 
+                             "95% CI (lower)", 
+                             "95% CI (upper)",
+                             "P-value", 
+                             "Number Samples Included")
   for (i in 1:n_perm) {
     temp_col <- paste0("imp", i)
     temp_fe <- 
@@ -314,59 +284,69 @@ calculate_FE <- function(var_data, n_perm, suffix = ""){
     FE_results[i, 2] <- temp_fe$conf.int[1]
     FE_results[i, 3] <- temp_fe$conf.int[2]
     FE_results[i, 4] <- temp_fe$p.value
+    FE_results[i, 5] <- nrow(var_data)
+    
   }
+   
+  write_tsv(as_tibble(FE_results), 
+            path = paste0("../data/outputs/", 
+                          Sys.Date(), 
+                          "_FE_imputation_plus_sequenced_results.tsv"))
+  
   return(FE_results)
 } # end calculate_FE()
 
-#' summarize_FE_results
-#' Generate summary statistics for FE test from real + imputed variants and save 
-#'   the results in a table and a figure. 
-#' @param FE_results FE_results. Matrix. Nrow = n_perm. Ncol = 4. Columsn 
-#'   describe FE results: "OR", "95% CI (lower)", "95% CI (upper)", and 
-#'   "P-value". 
-#' @param suffix Character. Description of cohort, optional. 
+#' summarize_model_results
+#' Generate summary statistics for FE test or logitistic regression from real + 
+#'   imputed variants and save the results in a table. 
+#'   
+#' @param model_results model_results. Matrix. Nrow = n_perm. Ncol = 5. Columns
+#'   describe model results: "OR", "95% CI (lower)", "95% CI (upper)", "P-value"
+#'   and "Number Samples Included."
+#' @param suffix Character. Description of test ("FE" or "logit"). Optional. 
 #'
-#' @return fe_summary. Tibble. nrow = 1. Ncol = 6. Columns describe statistics 
-#'   summarizing the larger matrix FE_results. Columns described: "Median OR", 
+#' @return model_summary. Tibble. nrow = 1. Ncol = 6. Columns describe statistics 
+#'   summarizing the larger matrix model_results. Columns described: "Median OR", 
 #'   "Min. OR", "Max OR", "Median P-value", "Min. P-value", and "Max P-value". 
 #' @noRd
-summarize_FE_results <- function(FE_results, suffix = ""){
-  FE_results <- as_tibble(FE_results)
-  or_summary <- summary(FE_results$OR)
-  p_summary <- summary(FE_results$`P-value`)
-  fe_summary <- matrix(NA, ncol = 6, nrow = 1)
-  colnames(fe_summary) <- c("Median OR",
+summarize_model_results <- function(model_results, suffix = ""){
+  model_results <- as_tibble(model_results)
+  or_summary <- summary(model_results$OR)
+  p_summary <- summary(model_results$`P-value`)
+  model_summary <- matrix(NA, ncol = 7, nrow = 1)
+  colnames(model_summary) <- c("Median OR",
                             "Min. OR",
                             "Max OR",
                             "Median P-value",
                             "Min. P-value",
-                            "Max P-value")
-  fe_summary <- as_tibble(fe_summary)
-  fe_summary$`Median OR`[1] <- format(round(or_summary[3], 2), nsmall = 2)
-  fe_summary$`Min. OR`[1] <- format(round(or_summary[1], 2), nsmall = 2)
-  fe_summary$`Max OR`[1] <- format(round(or_summary[6], 2), nsmall = 2)
-  fe_summary$`Median P-value`[1] <- format(round(p_summary[3], 2), nsmall = 2)
-  fe_summary$`Min. P-value`[1] <- format(round(p_summary[1], 2), nsmall = 2)
-  fe_summary$`Max P-value`[1] <- format(round(p_summary[6], 2), nsmall = 2)
+                            "Max P-value", 
+                            "Number Samples Included")
+  model_summary <- as_tibble(model_summary)
+  model_summary$`Median OR`[1] <- format(round(or_summary[3], 2), nsmall = 2)
+  model_summary$`Min. OR`[1] <- format(round(or_summary[1], 2), nsmall = 2)
+  model_summary$`Max OR`[1] <- format(round(or_summary[6], 2), nsmall = 2)
+  model_summary$`Median P-value`[1] <- format(round(p_summary[3], 2), nsmall = 2)
+  model_summary$`Min. P-value`[1] <- format(round(p_summary[1], 2), nsmall = 2)
+  model_summary$`Max P-value`[1] <- format(round(p_summary[6], 2), nsmall = 2)
+  model_summary$`Number Samples Included`[1] <- model_results[1, 5]
   
-  write_tsv(fe_summary, 
+  write_tsv(model_summary, 
             path = paste0("../data/outputs/", 
                           Sys.Date(), 
-                          "_FE_imputation_plus_sequenced_results", 
+                          "_imputation_plus_sequenced_results_summary", 
                           suffix, 
                           ".tsv"))
-  return(fe_summary)
-} # end summarize_FE_results()
+  return(model_summary)
+} # end summarize_model_results()
 
 #' describe_imputation_cohort
 #' Save in a log file a basic summary of the size cohort included in the 
 #'   imputation steps. 
 #' @param final_data Tibble. Metadata of the isolates included in the 
 #'   imputation steps. 
-#' @param suffix Character. Description of cohort, optional. 
 #'
 #' @noRd
-describe_imputation_cohort <- function(final_data, suffix = ""){
+describe_imputation_cohort <- function(final_data){
   sequenced <- final_data %>% 
     filter(WGS_performed == 1, Stratum_complete == 1)
   imputed <- final_data %>% 
@@ -461,21 +441,35 @@ describe_imputation_cohort <- function(final_data, suffix = ""){
   sink()
 } # end describe_imputation_cohort()
 
-#' Title
+#' calculate_logit
+#' @description Perform a logistic regression. Response variable: severe 
+#'   infection outcome. Predictors: Risk Score (as a continuous number) and the
+#'   presence/absence of the three trehalose utilization variants as a single 
+#'   variable (binary). 
 #'
-#' @param var_dat 
+#' @param var_dat Tibble. All of the imputed + observed variant data. Rows are
+#'   samples, columns are variants. Also contains other relevant model inputs. 
 #'
-#' @return
+#' @return model_results Output of the logistic regression.
+#'   List of 6 data points: 
+#'   Variant. Character. 
+#'   OR. Numeric.
+#'   95% CI (lower). Numeric. 
+#'   95% CI (upper). Numeric. 
+#'   P-value. Numeric. 
+#'   Number Samples Included. Numeric. 
 #' @export
 #'
 #' @examples
 calculate_logit <- function(var_dat){
-  # Rearrange code to have only the imputed variants and the necessary columns
+  # Rearrange code to have only the trehalose variants and the necessary columns
+  # Remember that "imputed" columns have imputed data for non-sequenced results
+  #  but have real data for sequenced results. 
   model_input <- var_dat %>% select(paste0("imp", 1:num_perm), 
                                     c("Risk_Score", 
                                       "Severe_Outcome", 
                                       "C171S_L172I_or_insertion"))
-  # Drop isolates without a risk score
+  # Drop isolates without a risk score or without variant data
   model_input <- model_input %>% filter(!is.na(Risk_Score), !is.na(imp1))
   print("dim of model input")
   print(dim(model_input))
@@ -499,9 +493,13 @@ calculate_logit <- function(var_dat){
   # 95%CI = exp(confint(model))
   
   # Save logit results in a model results
-  model_results <- matrix(NA, ncol = 5, nrow = num_perm)
-  colnames(model_results) <- 
-    c("Variant", "OR", "95% CI (lower)", "95% CI (upper)", "P-value")
+  model_results <- matrix(NA, ncol = 6, nrow = num_perm)
+  colnames(model_results) <- c("Variant",
+                               "OR", 
+                               "95% CI (lower)", 
+                               "95% CI (upper)",
+                               "P-value",
+                               "Number Samples Included")
   for (m in imputation_index) {
     model_results[m, 1] <- colnames(model_input)[m]
     model_results[m, 2] <-
@@ -516,6 +514,7 @@ calculate_logit <- function(var_dat){
     model_results[m, 5] <- 
       format(round(coef(summary(unadjusted_models[[m]]))[2 ,'Pr(>|z|)'], 2), 
              nsmall = 2)
+    model_results[m, 6] <- nrow(model_input)
   }
   
   # Order results by increasing OR
@@ -528,44 +527,51 @@ calculate_logit <- function(var_dat){
             path = paste0("../data/outputs/", 
                           Sys.Date(), 
                           "_logit_with_score_imputation.tsv"))
+
+  model_results <- as_tibble(model_results)
+  model_results$OR <- as.numeric(model_results$OR)
+  model_results$`95% CI (lower)` <- as.numeric(model_results$`95% CI (lower)`)
+  model_results$`95% CI (upper)` <- as.numeric(model_results$`95% CI (upper)`)
+  model_results$`P-value` <- as.numeric(model_results$`P-value`)
+
+  # Get 10 representative model results
+  # Evenly distributed results ranging from min to max point estimate
+  # By 10% increments
+  subset_row_index <- 
+    round(nrow(model_results)/9) * seq(from = 1, to = 9, by  = 1)
+  subset_row_index <- c(1, subset_row_index)
+  if (max(subset_row_index) > nrow(model_results)) {
+    subset_row_index[10] <- nrow(model_results)
+  }
   
-  # Note: I ploted the OR with confidence intervals, but as there are so many 
-  #       it was useless / hard to read
+  subset_model_results <- subset_model_results[subset_row_index, , drop = FALSE]
+   
+  level_order <- 
+    factor(subset_model_results$Variant, level = subset_model_results$Variant)
+   
+  CI_plot <- subset_model_results %>% 
+    arrange(OR) %>% 
+    ggplot(mapping = aes(x = level_order, y = OR)) + 
+    geom_point() + 
+    geom_errorbar(aes(ymax = `95% CI (upper)`, ymin = `95% CI (lower)`)) + 
+    theme_bw() + 
+    geom_abline(slope = 0, intercept = 1, color = "red") + 
+    coord_flip() +
+    xlab("Representative Imputations") + 
+    ylab("Odds Ratio + 95% CI") + 
+    ggtitle("OR, ordered from min(OR) to max(OR) by 10%") + 
+    theme(axis.text.x = element_text(size = rel(3), colour = "black"), 
+         axis.text.y = element_text(size = rel(0), color = "black"), 
+         axis.title = element_text(size = rel(2)))
   
-  # The plot below is useless because there are too many imputed variables
-  # model_results <- as_tibble(model_results)
-  # model_results$OR <- as.numeric(model_results$OR)
-  # model_results$`95% CI (lower)` <- as.numeric(model_results$`95% CI (lower)`)
-  # model_results$`95% CI (upper)` <- as.numeric(model_results$`95% CI (upper)`)
-  # model_results$`P-value` <- as.numeric(model_results$`P-value`)
-  # 
-  # level_order <- factor(model_results$Variant, level = model_results$Variant)
-  # 
-  # 
-  # big_model_plot <- model_results %>% arrange(OR) %>% 
-  #   ggplot(mapping = aes(x = level_order, y = OR)) + 
-  #   geom_point() + 
-  #   geom_errorbar(aes(ymax = `95% CI (upper)`, ymin = `95% CI (lower)`)) + 
-  #   theme_bw() + 
-  #   geom_abline(slope = 0, intercept = 1, color = "red") + 
-  #   coord_flip() +
-  #   xlab("TreR amino acid substitution") + 
-  #   ylab("Odds Ratio + 95% CI") + 
-  #   theme(axis.text.x = element_text(size = rel(3), colour = "black"), 
-  #         axis.text.y = element_text(size = rel(0), color = "black"), 
-  #         axis.title = element_text(size = rel(2)))
-  # 
-  # ggsave(big_model_plot, 
-  #        height = 40, 
-  #        width = 5, 
-  #        filename = paste0("../figures/", 
-  #                          Sys.Date(),
-  #                          "_logit_with_score_imputation.pdf"))
+  ggsave(CI_plot,
+         filename = paste0("../figures/", 
+                           Sys.Date(),
+                           "_logit_with_score_imputation_OR_and_CI.pdf"))
   
-  plot_name <-  paste0("../figures/", 
-                       Sys.Date(),
-                       "_logit_with_score_imputation_OR_hist.pdf")
-  pdf(plot_name)
+  pdf(paste0("../figures/", 
+             Sys.Date(),
+             "_logit_with_score_imputation_OR_hist.pdf"))
   hist(model_results$OR, 
        main = "Logit: Severe ~ Risk Score + Any Trehalose Variant",
        xlab = "OR", 
@@ -576,43 +582,44 @@ calculate_logit <- function(var_dat){
   return(model_results)
 } # end calculate_logit()
 
-#' summarize_logit_results
-#'
-#' @param logit_results 
-#' @param suffix 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-summarize_logit_results <- function(logit_results, suffix = ""){
-  or_summary <- summary(logit_results$OR)
-  class(logit_results$`P-value`) <- "numeric"
-  p_summary <- summary(logit_results$`P-value`)
-  logit_summary <- matrix(NA, ncol = 6, nrow = 1)
-  colnames(logit_summary) <- c("Median OR",
-                               "Min. OR",
-                               "Max OR",
-                               "Median P-value",
-                               "Min. P-value",
-                               "Max P-value")
-  logit_summary <- as_tibble(logit_summary)
-  logit_summary$`Median OR`[1] <- format(round(or_summary[3], 2), nsmall = 2)
-  logit_summary$`Min. OR`[1] <- format(round(or_summary[1], 2), nsmall = 2)
-  logit_summary$`Max OR`[1] <- format(round(or_summary[6], 2), nsmall = 2)
-  logit_summary$`Median P-value`[1] <- 
-    format(round(p_summary[3], 2), nsmall = 2)
-  logit_summary$`Min. P-value`[1] <- format(round(p_summary[1], 2), nsmall = 2)
-  logit_summary$`Max P-value`[1] <- format(round(p_summary[6], 2), nsmall = 2)
-  
-  write_tsv(logit_summary, 
-            path = paste0("../data/outputs/", 
-                          Sys.Date(), 
-                          "_imputation_logit_results", 
-                          suffix, 
-                          ".tsv"))
-  return(logit_summary)
-} # end summarize_logit_results()
+#' #' summarize_logit_results
+#' #' @description Summarize the results of the logistic regression
+#' #'
+#' #' @param logit_results 
+#' #' @param suffix 
+#' #'
+#' #' @return
+#' #' @export
+#' #'
+#' #' @examples
+#' summarize_logit_results <- function(logit_results, suffix = ""){
+#'   or_summary <- summary(logit_results$OR)
+#'   class(logit_results$`P-value`) <- "numeric"
+#'   p_summary <- summary(logit_results$`P-value`)
+#'   logit_summary <- matrix(NA, ncol = 6, nrow = 1)
+#'   colnames(logit_summary) <- c("Median OR",
+#'                                "Min. OR",
+#'                                "Max OR",
+#'                                "Median P-value",
+#'                                "Min. P-value",
+#'                                "Max P-value")
+#'   logit_summary <- as_tibble(logit_summary)
+#'   logit_summary$`Median OR`[1] <- format(round(or_summary[3], 2), nsmall = 2)
+#'   logit_summary$`Min. OR`[1] <- format(round(or_summary[1], 2), nsmall = 2)
+#'   logit_summary$`Max OR`[1] <- format(round(or_summary[6], 2), nsmall = 2)
+#'   logit_summary$`Median P-value`[1] <- 
+#'     format(round(p_summary[3], 2), nsmall = 2)
+#'   logit_summary$`Min. P-value`[1] <- format(round(p_summary[1], 2), nsmall = 2)
+#'   logit_summary$`Max P-value`[1] <- format(round(p_summary[6], 2), nsmall = 2)
+#'   
+#'   write_tsv(logit_summary, 
+#'             path = paste0("../data/outputs/", 
+#'                           Sys.Date(), 
+#'                           "_imputation_logit_results", 
+#'                           suffix, 
+#'                           ".tsv"))
+#'   return(logit_summary)
+#' } # end summarize_logit_results()
 
 
 #' impute_variants
@@ -620,10 +627,9 @@ summarize_logit_results <- function(logit_results, suffix = ""){
 #'   isolates for which there is ribotype information but not sequence data. 
 #' @param metadata_path Character. Path to metadata file. 
 #' @param num_perm Number. Number of times to run imputation. 
-#' @param suffix Character. Description of cohort, option. 
 #'
 #' @noRd
-impute_variants <- function(metadata_path, num_perm, suffix = ""){
+impute_variants <- function(metadata_path, num_perm){
   variant_data <- read_tsv(metadata_path)
   # Select columns to work with
   variant_data <- 
@@ -673,11 +679,12 @@ impute_variants <- function(metadata_path, num_perm, suffix = ""){
   
   imputed_and_matched <- 
     join_imputed_to_seq(original_data, matched_seq_data, num_perm, impute_var_all)
-  fe_results <- calculate_FE(imputed_and_matched, num_perm, suffix)
-  fe_summary <- summarize_FE_results(fe_results, suffix)
+  fe_results <- calculate_FE(imputed_and_matched, num_perm)
+  fe_summary <- summarize_model_results(fe_results, suffix = "_FE")
   logit_results <- calculate_logit(imputed_and_matched)
-  summarize_logit_results(logit_results, "_risk_score")
-  describe_imputation_cohort(imputed_and_matched, suffix)
+  logit_summary <- 
+    summarize_model_results(logit_results, suffix = "_logit_risk_score")
+  describe_imputation_cohort(imputed_and_matched)
 } # end impute_variants()
 
 
