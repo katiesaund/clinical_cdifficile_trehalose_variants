@@ -47,7 +47,7 @@ save_four_gene_insertion <- function(pan_genome_path){
   seqinr::write.fasta(sequences = four_gene_trehalose_insertion, 
                       names = seq_names, 
                       file.out = 
-                        "../data/outputs/supplementary_file_1.fna", 
+                        "../data/outputs/Supplementary_file_1.fna", 
                       open = "w", 
                       as.string = TRUE, 
                       nbchar = 60)
