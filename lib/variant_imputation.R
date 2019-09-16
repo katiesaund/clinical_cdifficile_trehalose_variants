@@ -158,7 +158,6 @@ generate_imputed_data <- function(variant_data, n_perm, n_per_ribo, case_or_ctrl
   non_sequenced <- non_sequenced %>% filter(Ribotype %in% n_per_ribo$Ribotype)
   num_no_wgs_samples <- non_sequenced %>% nrow(.)
   
-  
   perm_imputed_data <- matrix(0, nrow = num_no_wgs_samples, ncol = n_perm)
   row.names(perm_imputed_data) <- non_sequenced$ID
   set.seed(1)
@@ -273,11 +272,6 @@ calculate_FE <- function(var_data){
   # Imputed plus sequenced results
   var_data <- 
     var_data %>% 
-    # select(-c(ID, 
-    #           Ribotype, 
-    #           WGS_performed, 
-    #           Duplicated_Patient_No_Missing_Info, 
-    #           C171S_L172I_or_insertion))
     filter(!is.na(Imp_or_Obs))
   
   FE_results <- matrix(NA, ncol = 5, nrow = 1)
@@ -294,24 +288,6 @@ calculate_FE <- function(var_data){
   FE_results[1, 3] <- round(temp_fe$conf.int[2], 2)
   FE_results[1, 4] <- round(temp_fe$p.value, 2)
   FE_results[1, 5] <- nrow(var_data)
-  
-  # FE_results <- matrix(NA, ncol = 5, nrow = n_perm)
-  # colnames(FE_results)  <- c("OR", 
-  #                            "95% CI (lower)", 
-  #                            "95% CI (upper)",
-  #                            "P-value", 
-  #                            "Number Samples Included")
-  # for (i in 1:n_perm) {
-  #   temp_col <- paste0("imp", i)
-  #   temp_fe <- 
-  #     exact2x2(var_data$Severe_Outcome, var_data[[as.character(temp_col)]])
-  #   FE_results[i, 1] <- temp_fe$estimate
-  #   FE_results[i, 2] <- temp_fe$conf.int[1]
-  #   FE_results[i, 3] <- temp_fe$conf.int[2]
-  #   FE_results[i, 4] <- temp_fe$p.value
-  #   FE_results[i, 5] <- nrow(var_data)
-  #   
-  # }
    
   write_tsv(as_tibble(FE_results), 
             path = paste0("../data/outputs/", 
@@ -491,9 +467,7 @@ calculate_logit <- function(var_dat, num_perm){
                                       "Severe_Outcome", 
                                       "C171S_L172I_or_insertion"))
   # Drop isolates without a risk score or without variant data
-  model_input <- model_input %>% filter(!is.na(Risk_Score), !is.na(imp1))
-  print("dim of model input")
-  print(dim(model_input))
+  model_input <- model_input %>% filter(!is.na(Risk_Score), !is.na(Imp_or_Obs))
   
   # Initialize data objects
   unadjusted_models <- rep(list(NULL), num_perm)
@@ -571,14 +545,14 @@ calculate_logit <- function(var_dat, num_perm){
   }
    
   subset_model_results <- ordered_model_results[subset_row_index, , drop = FALSE]
-
+  
+  # Next two lines keep the variants plotting in the correct order
   subset_model_results$Variant <- as.character(subset_model_results$Variant)
-  #Then turn it back into a factor with the levels in the correct order
-  subset_model_results$Variant <- factor(subset_model_results$Variant, levels = unique(subset_model_results$Variant))
+  subset_model_results$Variant <- 
+    factor(subset_model_results$Variant, 
+           levels = unique(subset_model_results$Variant))
   
   CI_plot <- subset_model_results %>%
-    # arrange(OR) %>%
-    # ggplot(mapping = aes(x = level_order, y = OR)) +
     ggplot(mapping = aes(x = Variant, y = OR)) +
     geom_point() +
     geom_errorbar(aes(ymax = `95% CI (upper)`, ymin = `95% CI (lower)`)) +
@@ -670,7 +644,6 @@ impute_variants <- function(metadata_path, num_perm){
                                               num_perm, 
                                               impute_var_all)
   fe_results <- calculate_FE(imputed_and_matched)
-  # fe_summary <- summarize_model_results(fe_results, suffix = "_FE")
   logit_results <- calculate_logit(imputed_and_matched, num_perm)
   logit_summary <- summarize_model_results(logit_results, "_logit_risk_score")
   describe_imputation_cohort(imputed_and_matched)
