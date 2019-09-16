@@ -432,9 +432,6 @@ describe_imputation_cohort <- function(final_data){
   print(paste0("Logit N = ", nrow(logit_input)))
   print(paste0("Logit Case N = ", logit_case))
   print(paste0("Logit Control N = ", logit_ctrl))
-  
-  
-  # print(paste0("Unique inidividuals N = ", n_unique_individ))
   sink()
 } # end describe_imputation_cohort()
 
