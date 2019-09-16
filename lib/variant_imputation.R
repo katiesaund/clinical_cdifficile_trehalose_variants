@@ -221,6 +221,9 @@ join_imputed_to_seq <- function(original_data, matched_seq_data, num_perm, imp_m
     colnames(imp_mat)[i] <- colnames(temp_seq_var)[i] <- paste0("imp", i - 1)
   }
   
+  imp_mat <- imp_mat %>% mutate("Imp_or_Obs" = "imputed")
+  temp_seq_var <- temp_seq_var %>% mutate("Imp_or_Obs" = "observed")
+  
   imp_and_seq_var <- rbind(imp_mat, temp_seq_var)
   all_data <- full_join(original_data, imp_and_seq_var, by = "ID")
   return(all_data)
@@ -241,15 +244,14 @@ join_imputed_to_seq <- function(original_data, matched_seq_data, num_perm, imp_m
 #' @param var_data Tibble. The isolates are in the rows and the columns are a 
 #'   combination of real (observed) supplemented with imputed trehalose 
 #'   utilization variants
-#' @param n_perm Number. Number of imputations performed.
 #'
 #' @return FE_results. Matrix. Nrow = 1. Ncol = 5. Columns describe FE 
 #'   results: "OR", "95% CI (lower)", "95% CI (upper)", "P-value", and 
 #'   "Number Samples Included."
 #' @noRd
-calculate_FE <- function(var_data, n_perm){
+calculate_FE <- function(var_data){
   # Sequenced, matched results
-  seq_only <- var_data %>% filter(WGS_performed == 1, Stratum_complete == 1)
+  seq_only <- var_data %>% filter(Imp_or_Obs == "observed")
   seq_fe <- exact2x2(seq_only$Severe_Outcome, seq_only$C171S_L172I_or_insertion)
   seq_results <- matrix(NA, ncol = 5, nrow = 1)
   colnames(seq_results) <- c("OR", 
@@ -276,7 +278,7 @@ calculate_FE <- function(var_data, n_perm){
     #           WGS_performed, 
     #           Duplicated_Patient_No_Missing_Info, 
     #           C171S_L172I_or_insertion))
-    filter(!is.na(imp1))
+    filter(!is.na(Imp_or_Obs))
   
   FE_results <- matrix(NA, ncol = 5, nrow = 1)
   colnames(FE_results)  <- c("OR", 
@@ -287,10 +289,10 @@ calculate_FE <- function(var_data, n_perm){
   
   temp_fe <- 
     exact2x2(var_data$Severe_Outcome, var_data$imp1)
-  FE_results[1, 1] <- temp_fe$estimate
-  FE_results[1, 2] <- temp_fe$conf.int[1]
-  FE_results[1, 3] <- temp_fe$conf.int[2]
-  FE_results[1, 4] <- temp_fe$p.value
+  FE_results[1, 1] <- round(temp_fe$estimate, 2)
+  FE_results[1, 2] <- round(temp_fe$conf.int[1], 2)
+  FE_results[1, 3] <- round(temp_fe$conf.int[2], 2)
+  FE_results[1, 4] <- round(temp_fe$p.value, 2)
   FE_results[1, 5] <- nrow(var_data)
   
   # FE_results <- matrix(NA, ncol = 5, nrow = n_perm)
@@ -351,9 +353,9 @@ summarize_model_results <- function(model_results, suffix = ""){
   model_summary$`Median P-value`[1] <- format(round(p_summary[3], 2), nsmall = 2)
   model_summary$`Min. P-value`[1] <- format(round(p_summary[1], 2), nsmall = 2)
   model_summary$`Max P-value`[1] <- format(round(p_summary[6], 2), nsmall = 2)
-  model_summary$`Number Samples Included`[1] <- model_results[1, 5]
+  model_summary$`Number Samples Included`[1] <- as.numeric(model_results[1, 6])
   
-  write_tsv(model_summary, 
+  write_tsv(as_tibble(model_summary), 
             path = paste0("../data/outputs/", 
                           Sys.Date(), 
                           "_imputation_plus_sequenced_results_summary", 
@@ -371,10 +373,9 @@ summarize_model_results <- function(model_results, suffix = ""){
 #' @noRd
 describe_imputation_cohort <- function(final_data){
   sequenced <- final_data %>% 
-    filter(WGS_performed == 1, Stratum_complete == 1)
+    filter(Imp_or_Obs == "observed")
   imputed <- final_data %>% 
-    filter(WGS_performed == 0 | Stratum_complete == 0) %>% 
-    filter(!is.na(imp1))
+    filter(Imp_or_Obs == "imputed")
   
   n_seq_sample <- nrow(sequenced)
   n_seq_ribo <- length(unique(sequenced$Ribotype))
@@ -386,13 +387,11 @@ describe_imputation_cohort <- function(final_data){
   n_imp_case <- imputed %>% filter(Severe_Outcome == 1) %>% nrow()
   n_imp_ctrl <- imputed %>% filter(Severe_Outcome == 0) %>% nrow()
   
-  # n_unique_individ <- sum(!final_data$Duplicated_Patient_No_Missing_Info)
-  
   # Describe FE test -----------------------------------------------------------
   # Sequenced FE
   FE_seq_only <-
     final_data %>% 
-    filter(WGS_performed == 1, Stratum_complete == 1)
+    filter(Imp_or_Obs == "observed")
   FE_seq_only_case <- 
     FE_seq_only %>% 
     filter(Severe_Outcome == 1) %>%
@@ -405,7 +404,7 @@ describe_imputation_cohort <- function(final_data){
   # Imputed + Sequenced FE
   # Imputed plus all sequenced results
   FE_all <- final_data %>% 
-    filter(!is.na(imp1)) 
+    filter(!is.na(Imp_or_Obs)) 
   FE_all_case <- 
     FE_all %>% 
     filter(Severe_Outcome == 1) %>% 
@@ -418,7 +417,7 @@ describe_imputation_cohort <- function(final_data){
   # Describe logit -------------------------------------------------------------
   logit_input <- 
     final_data %>% 
-    filter(!is.na(Risk_Score), !is.na(imp1))
+    filter(!is.na(Risk_Score), !is.na(Imp_or_Obs))
   logit_case <- 
     logit_input %>% 
     filter(Severe_Outcome == 1) %>% 
@@ -431,7 +430,6 @@ describe_imputation_cohort <- function(final_data){
   sink(paste0("../data/outputs/", 
               Sys.Date(), 
               "_imputation_descriptive_stats", 
-              suffix, 
               ".txt"))
   print("Imputation cohort")
   print(paste0("Sequenced & Match N = ", n_seq_sample))
@@ -484,7 +482,7 @@ describe_imputation_cohort <- function(final_data){
 #' @export
 #'
 #' @examples
-calculate_logit <- function(var_dat){
+calculate_logit <- function(var_dat, num_perm){
   # Rearrange code to have only the trehalose variants and the necessary columns
   # Remember that "imputed" columns have imputed data for non-sequenced results
   #  but have real data for sequenced results. 
@@ -552,43 +550,50 @@ calculate_logit <- function(var_dat){
                           "_logit_with_score_imputation.tsv"))
 
   model_results <- as_tibble(model_results)
+  model_results$Variant <- as.factor(model_results$Variant)
   model_results$OR <- as.numeric(model_results$OR)
   model_results$`95% CI (lower)` <- as.numeric(model_results$`95% CI (lower)`)
   model_results$`95% CI (upper)` <- as.numeric(model_results$`95% CI (upper)`)
   model_results$`P-value` <- as.numeric(model_results$`P-value`)
 
-  # Get 10 representative model results
-  # Evenly distributed results ranging from min to max point estimate
-  # By 10% increments
+  # # Get 10 representative model results
+  # # Evenly distributed results ranging from min to max point estimate
+  # # By 10% increments
+  
+  ordered_model_results <- 
+    model_results %>%
+    arrange(OR)
   subset_row_index <- 
-    round(nrow(model_results)/9) * seq(from = 1, to = 9, by  = 1)
+    round(nrow(ordered_model_results)/9) * seq(from = 1, to = 9, by  = 1)
   subset_row_index <- c(1, subset_row_index)
-  if (max(subset_row_index) > nrow(model_results)) {
-    subset_row_index[10] <- nrow(model_results)
+  if (max(subset_row_index) > nrow(ordered_model_results)) {
+    subset_row_index[10] <- nrow(ordered_model_results)
   }
+   
+  subset_model_results <- ordered_model_results[subset_row_index, , drop = FALSE]
+
+  subset_model_results$Variant <- as.character(subset_model_results$Variant)
+  #Then turn it back into a factor with the levels in the correct order
+  subset_model_results$Variant <- factor(subset_model_results$Variant, levels = unique(subset_model_results$Variant))
   
-  subset_model_results <- subset_model_results[subset_row_index, , drop = FALSE]
-   
-  level_order <- 
-    factor(subset_model_results$Variant, level = subset_model_results$Variant)
-   
-  CI_plot <- subset_model_results %>% 
-    arrange(OR) %>% 
-    ggplot(mapping = aes(x = level_order, y = OR)) + 
-    geom_point() + 
-    geom_errorbar(aes(ymax = `95% CI (upper)`, ymin = `95% CI (lower)`)) + 
-    theme_bw() + 
-    geom_abline(slope = 0, intercept = 1, color = "red") + 
+  CI_plot <- subset_model_results %>%
+    # arrange(OR) %>%
+    # ggplot(mapping = aes(x = level_order, y = OR)) +
+    ggplot(mapping = aes(x = Variant, y = OR)) +
+    geom_point() +
+    geom_errorbar(aes(ymax = `95% CI (upper)`, ymin = `95% CI (lower)`)) +
+    theme_bw() +
+    geom_abline(slope = 0, intercept = 1, color = "red") +
     coord_flip() +
-    xlab("Representative Imputations") + 
-    ylab("Odds Ratio + 95% CI") + 
-    ggtitle("OR, ordered from min(OR) to max(OR) by 10%") + 
-    theme(axis.text.x = element_text(size = rel(3), colour = "black"), 
-         axis.text.y = element_text(size = rel(0), color = "black"), 
+    xlab("Representative Imputations") +
+    ylab("Odds Ratio + 95% CI") +
+    ggtitle("Logit: Severe ~ Risk Score + Any Trehalose Variant.\n OR, ordered from min(OR) to max(OR) by 10%") +
+    theme(axis.text.x = element_text(size = rel(3), colour = "black"),
+         axis.text.y = element_text(size = rel(0), color = "black"),
          axis.title = element_text(size = rel(2)))
-  
+
   ggsave(CI_plot,
-         filename = paste0("../figures/", 
+         filename = paste0("../figures/",
                            Sys.Date(),
                            "_logit_with_score_imputation_OR_and_CI.pdf"))
   
@@ -664,10 +669,9 @@ impute_variants <- function(metadata_path, num_perm){
                                               matched_seq_data,
                                               num_perm, 
                                               impute_var_all)
-  fe_results <- calculate_FE(imputed_and_matched, num_perm)
+  fe_results <- calculate_FE(imputed_and_matched)
   # fe_summary <- summarize_model_results(fe_results, suffix = "_FE")
-  logit_results <- calculate_logit(imputed_and_matched)
-  logit_summary <- summarize_model_results(logit_results, 
-                                           suffix = "_logit_risk_score")
+  logit_results <- calculate_logit(imputed_and_matched, num_perm)
+  logit_summary <- summarize_model_results(logit_results, "_logit_risk_score")
   describe_imputation_cohort(imputed_and_matched)
 } # end impute_variants()
