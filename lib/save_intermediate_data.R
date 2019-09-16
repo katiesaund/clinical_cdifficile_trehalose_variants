@@ -304,9 +304,7 @@ save_data_for_tre_analysis <- function(out_group,
   
   # Save metadata for Supplementary table 1
   write.table(metadata, 
-              file = paste0("../data/outputs/", 
-                            Sys.Date(), 
-                            "_trehalose_metadata_for_supplement.tsv"), 
+              file = paste0("../data/outputs/Supplementary_table_1.tsv"), 
               sep = "\t", 
               quote = FALSE, 
               col.names = TRUE, 

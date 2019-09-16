@@ -142,6 +142,9 @@ run_clogit_models <- function(metadata_path){
                    Sys.Date(), 
                    "_clogit_all_trehalose_variants.tsv"))
   
+  write_tsv(as_tibble(model_results), 
+            paste0("../data/outputs/Supplementary_table_2.tsv"))
+  
   write_tsv(as_tibble(smaller_model), 
             paste0("../data/outputs/", 
                    Sys.Date(), 

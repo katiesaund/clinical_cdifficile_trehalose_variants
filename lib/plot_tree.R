@@ -109,9 +109,7 @@ plot_trehalose_tree <- function(tree_path, metadata_path, show_labels = TRUE){
 
   # PLOT ----------------------------------------------------------------------#
   pdf(paper = "USr", 
-      file = paste0("../figures/",
-                    Sys.Date(), 
-                    "_trehalose_tree.pdf"), 
+      file = paste0("../figures/Figure_1.pdf"), 
       width = 10, 
       height = 8)
   plot(tree, 
