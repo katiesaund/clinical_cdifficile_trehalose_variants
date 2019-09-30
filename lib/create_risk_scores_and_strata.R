@@ -1,13 +1,13 @@
 # Adapted Krishna Rao's script into a function and updated outputs. 
 
-#' create_risk_scores_and_strata
-#' Generate the severe outcome risk scores and matched strata from model in 
-#'   Rao 2015 CID paper for trehalose analysis.  
+#' Create the risk scores and group isolates into strata 
+#' @description Generate the severe outcome risk scores and matched strata from 
+#'   model in Rao 2015 CID paper for trehalose analysis.  
 #' @param model_data Matrix or dataframe with model data.  
 #'
 #' @return Dataframe with dataset's propensity scores, stratum (when 
 #'   applicable), and original data that went into creating model. 
-#' @noMd
+#' @noRd
 create_risk_scores_and_strata <- function(model_data){
   model_param <- c("CDC_SEV_ATT",
                    "age", 
@@ -129,8 +129,5 @@ create_risk_scores_and_strata <- function(model_data){
                        "Stratum", 
                        "Unmatched")
   
-  write_tsv(final, 
-            path = paste0("../data/outputs/",
-                          Sys.Date(), 
-                          "_severity_model.tsv"))
+  write_tsv(final, path = "../data/outputs/severity_model.tsv")
 } # end create_risk_scores_and_strata()

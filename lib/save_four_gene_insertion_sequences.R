@@ -1,15 +1,12 @@
-#' save_four_gene_insertion
-#' # 1. Read in the pan genome file. 
-# 2. Extract the sequences for the four gene trehalose insertion. 
-# 3. Save in a new fasta file. 
+#' Save the four gene trehalose insertion to a fasta file
+#' @description 1. Read in the pan genome file. 
+#'   2. Extract the sequences for the four gene trehalose insertion. 
+#'   3. Save in a new fasta file. 
 #' @param pan_genome_path 
 #'
-#' @return
-#' @export
-#'
-#' @examples
+#' @noRd
 save_four_gene_insertion <- function(pan_genome_path){
-  # Note: command: roary -p 8 -r -e -n -v -i 70 *.gff
+  # Note: run command was: $ roary -p 8 -r -e -n -v -i 70 *.gff
   
   # Based on BLAST results these are the four genes of interest:  
   # Name  | Roary name  
@@ -38,16 +35,7 @@ save_four_gene_insertion <- function(pan_genome_path){
   # 3. Save in a new fasta file.  
   seqinr::write.fasta(sequences = four_gene_trehalose_insertion, 
                       names = seq_names, 
-                      file.out = 
-                        "../data/outputs/four_gene_trehalose_insertion.fna", 
-                      open = "w", 
-                      as.string = TRUE, 
-                      nbchar = 60)
-  
-  seqinr::write.fasta(sequences = four_gene_trehalose_insertion, 
-                      names = seq_names, 
-                      file.out = 
-                        "../data/outputs/Supplementary_file_1.fna", 
+                      file.out = "../data/outputs/Supplementary_file_1.fna", 
                       open = "w", 
                       as.string = TRUE, 
                       nbchar = 60)

@@ -49,7 +49,6 @@ calculate_variant_ratio_by_ribo <- function(variant_data, case_or_ctrl){
     "% of isolates with trehalose utilization variant"
   write_tsv(save_version, 
             path = paste0("../data/outputs/", 
-                          Sys.Date(), 
                           "_trehalose_prevalence_by_ribotype_",
                           case_or_ctrl, 
                           ".tsv"), 
@@ -265,7 +264,6 @@ summarize_model_results <- function(model_results, suffix = ""){
   
   write_tsv(as_tibble(model_summary), 
             path = paste0("../data/outputs/", 
-                          Sys.Date(), 
                           "_imputation_plus_sequenced_results_summary", 
                           suffix, 
                           ".tsv"))
@@ -311,7 +309,6 @@ describe_imputation_cohort <- function(final_data, num_perm){
     nrow()
 
   sink(paste0("../data/outputs/", 
-              Sys.Date(), 
               "_imputation_descriptive_stats", 
               ".txt"))
   print("Number of permutations")
@@ -418,7 +415,6 @@ calculate_logit <- function(var_dat, num_perm){
   # Save table 
   write_tsv(x = model_results, 
             path = paste0("../data/outputs/", 
-                          Sys.Date(), 
                           "_logit_with_score_imputation.tsv"))
 
   model_results <- as_tibble(model_results)

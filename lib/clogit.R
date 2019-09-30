@@ -10,9 +10,9 @@
 # Perform multiple test correction (fdr)
 # Examine statistics for each model. 
 
-#' run_clogit_models
-#' This function runs clogit models on all trehalose variants input and saves 
-#'   the model results in a table as both pdf and a .tsv file. 
+#' Run conditional models
+#' @description This function runs clogit models on all trehalose variants input
+#'   and saves the model results in a .tsv file. 
 #' @param metadata_path Character. Path to model inputs, strata, etc...
 #'
 #' @noRd
@@ -110,43 +110,19 @@ run_clogit_models <- function(metadata_path){
   model_results[ , 5] <- 
     format(round(p.adjust(model_results[ , 5], method = "fdr"), 2), nsmall = 2)
 
-  # Save table 
-  my_theme <- 
-    ttheme_minimal(base_size = 11, 
-                   padding = unit(c(6, 1), "mm"),
-                   core = list(fg_params = list(hjust = 1, x = 0.9), 
-                              bg_params = list(fill = c("grey95", "white"))),
-                   rowhead = list(fg_params = list(hjust = 0, x = 0)), 
-                   colhead = list(fg_params = list()))
-  table_plot <- tableGrob(model_results, theme = my_theme)
-  pdf(paste0("../figures/", 
-             Sys.Date(), 
-             "_clogit_all_trehalose_variants_table.pdf"))
-  grid.draw(table_plot)
-  dev.off()
-  
   # Subset to just the variants of interest
   var_of_interest <- c("C171S_L172I_or_insertion",
                        "Leu172Ile", 
                        "four_gene_insertion")
   smaller_model <- model_results[model_results[ , 1] %in% var_of_interest, ]
-  table_plot <- tableGrob(smaller_model, theme = my_theme)
-  pdf(paste0("../figures/",
-             Sys.Date(), 
-             "_clogit_only_trehalose_variants_of_interest_table.pdf"))
-  grid.draw(table_plot)
-  dev.off()
+
+  # Save results
+  write_tsv(as_tibble(model_results),
+            "../data/outputs/clogit_all_trehalose_variants.tsv")
   
   write_tsv(as_tibble(model_results), 
-            paste0("../data/outputs/", 
-                   Sys.Date(), 
-                   "_clogit_all_trehalose_variants.tsv"))
-  
-  write_tsv(as_tibble(model_results), 
-            paste0("../data/outputs/Supplementary_table_2.tsv"))
+            "../data/outputs/Supplementary_table_2.tsv")
   
   write_tsv(as_tibble(smaller_model), 
-            paste0("../data/outputs/", 
-                   Sys.Date(), 
-                   "_clogit_only_trehalose_variants_of_interest.tsv"))
+            "../data/outputs/_clogit_only_trehalose_variants_of_interest.tsv")
 } # end run_clogit_models()

@@ -1,7 +1,7 @@
-#' print_ribo_stats
-#' This function prints to a log information about the number of isolates from a 
-#'   specified ribotype in the sequenced cohort, sequenced cases, and sequenced
-#'   controls. 
+#' Print statistics related to ribotype
+#' @description This function prints to a log information about the number of 
+#'   isolates from a specified ribotype in the sequenced cohort, sequenced 
+#'   cases, and sequenced controls. 
 #' @param metadata. Tibble with ribotype, sequencing status, and severity info. 
 #' @param rbtyp Character. One of the ribotypes in the cohort. 
 #'
@@ -24,10 +24,10 @@ print_ribo_stats <- function(metadata, rbtyp){
   
 } # end print_ribo_stats()
 
-#' print_phylogenetic_distribution
-#' This function prints to a log information about the number of isolates with a
-#'   specific variant and their ribotypes to gain insight into the phylogenetic
-#'   distribution of the variant.  
+#' Print phylogenetic distribution of this variant
+#' @description This function prints to a log information about the number of 
+#'   isolates with a specific variant and their ribotypes to gain insight into 
+#'   the phylogenetic distribution of the variant.  
 #' @param metadata Tibble with ribotype, sequencing status, and severity info. 
 #' @param variant_name Character. Column name of the variant of interest found
 #'   in metadata. 
@@ -74,9 +74,9 @@ print_phylogenetic_distribution <-
                num_ribo_in_matched))
 } # end print_phylogenetic_distribution()
 
-#' generate_stats
-#' This function generates the basic stats required to describe the propsenity
-#'   score matched data set. 
+#' Generate descriptve statistics of samples
+#' @description This function generates the basic stats required to describe the 
+#'   risk score matched data set. 
 #'
 #' @param metadata_path Character. Path to location of metadata file. 
 #'
@@ -84,7 +84,7 @@ print_phylogenetic_distribution <-
 generate_stats <- function(metadata_path){
   metadata <- read_tsv(metadata_path, 
                        col_names = TRUE)
-  sink(paste0("../data/outputs/", Sys.Date(), "_descriptive_stats.txt"))
+  sink("../data/outputs/descriptive_stats.txt")
   # Study population: 
   # Number of CDI cases
   print("Number of C. difficile infections (original cohort)")

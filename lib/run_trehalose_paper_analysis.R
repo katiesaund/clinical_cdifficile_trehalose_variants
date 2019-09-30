@@ -4,9 +4,6 @@
 library(tidyverse)
 library(ape)
 library(survival)
-library(gridExtra)
-library(grid)
-library(exact2x2)
 library(seqinr)
 
 # Functions -------------------------------------------------------------------# 
@@ -34,7 +31,7 @@ tree_path <- "../data/inputs/input_tree.tree"
 snp_path <- "../data/inputs/SNP_matrix.tsv"
 pan_path <- "../data/inputs/gene_presence_absence.Rtab"
 
-model_path <- paste0("../data/outputs/", Sys.Date(), "_severity_model.tsv")
+model_path <- paste0("../data/outputs/severity_model.tsv")
 
 save_data_for_tre_analysis(out_group, 
                            keeper_path,
@@ -44,13 +41,11 @@ save_data_for_tre_analysis(out_group,
                            model_path)
 
 # Describe study cohort (ribotype, presence of trehalose variants, etc...)
-metadata_path <- 
-  paste0("../data/outputs/", Sys.Date(), "_pre-analysis_trehalose_metadata.tsv")
+metadata_path <- "../data/outputs/pre-analysis_trehalose_metadata.tsv"
 generate_stats(metadata_path)
 
-
 # Plot tree with trehalose variants on it 
-updated_tree_path <- paste0("../data/outputs/", Sys.Date(), "_trehalose.tree")
+updated_tree_path <- "../data/outputs/trehalose.tree"
 plot_trehalose_tree(updated_tree_path, metadata_path) # FALSE to drop tip.labels
 
 # Calculate conditional logistic regression and generate tables of results

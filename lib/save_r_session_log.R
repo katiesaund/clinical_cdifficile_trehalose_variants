@@ -1,11 +1,9 @@
-#' save_session_info
-#' Save the R session info, loaded R libaries to text file. 
+#' Save R session information
+#' @description Save the R session info & libraries to text file. 
 #'
 #' @noRd
 save_session_info <- function(){
   log <- utils::capture.output(utils::sessionInfo())
   write(log, 
-        file = paste0("../data/outputs/", 
-                      Sys.Date(), 
-                      "_R_session_log.txt"))
+        file = "../data/outputs/R_session_log.txt")
 } # end save_session_info()

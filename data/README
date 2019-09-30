@@ -20,10 +20,6 @@ Notes on the data in this directory:
   Matrix of all variants from this data set (including bad samples). 
   Original file is located here: /nfs/esnitkin/Project_Cdiff/Sequence_data/Project_propensity_score_match/consensus/2019_07_11_09_41_20_core_results/data_matrix/matrices/SNP_matrix_code.csv
   
-* inputs/<Bioproject information>
-  Information for bioproject sequence submission
-  Original file is located here: 
-  
 * inputs/model_variables_plus_ribo_and_id.tsv
   Information for full cohort (not just the Propensity Score Matched set)
   Original file is located here: /Box Sync/Katie_Documents/Snitkin_Lab/Cdiff/Propensity_Matching_Manuscript/matched_set_fromn_Krishna/2019-07-17_model_variables_plus_ribo_and_id.tsv
