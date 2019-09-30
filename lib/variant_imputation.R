@@ -1,13 +1,14 @@
-#' calculate_variant_ratio_by_ribo
-#' For each ribotype in the WGS'd cohort count what percent of the isolates from 
-#'   each ribotype has any of the three trehalose variants of interest (C171S, 
-#'   L172I, or four gene insertion.) Return a tibble with the observed trehalose 
-#'   utilization variant ratio for each ribotype. Save a table for supplement
-#'   with information about ribotype-specific ratio for trehalose variant 
-#'   presence. Calculate the ratio by ribotype for controls based only on data
-#'   obtained from controls; similarly, only calculate the ratio by ribotype for
-#'   cases based on data obtained from cases. This is essential to keep with the
-#'   case-control study upon which this data is based.
+#' Calculate ratio of variant presence/absence by ribotype
+#' @description For each ribotype in the WGS'd cohort count what percent of the 
+#'   isolates from each ribotype has any of the three trehalose variants of 
+#'   interest (C171S, L172I, or four gene insertion.) Return a tibble with the 
+#'   observed trehalose utilization variant ratio for each ribotype. Save a 
+#'   table for supplement with information about ribotype-specific ratio for 
+#'   trehalose variant presence. Calculate the ratio by ribotype for controls
+#'   based only on data obtained from controls; similarly, only calculate the
+#'   ratio by ribotype for cases based on data obtained from cases. This is 
+#'   essential to keep with the case-control study upon which this data is 
+#'   based.
 #' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
 #'   individual isolates and columns contain, among other info, trehalose
 #'   variants. 
@@ -56,11 +57,11 @@ calculate_variant_ratio_by_ribo <- function(variant_data, case_or_ctrl){
   return(obs_tre_var_by_ribo)
 } # end calculate_variant_ratio_by_ribo()
 
-#' drop_ribo_absent_from_matched_WGS
-#' Remove those ribotypes from consideration which had no isolates that were 
-#'   ever sequenced, because if there is no sequencing then the trehalose 
-#'   utilization variant presence/absence cannot be calculated. If that's not 
-#'   calculated then we cannot use those ribotypes for imputation of 
+#' Drop the ribotypes which are absent in the matched WGS data set
+#' @description Remove those ribotypes from consideration which had no isolates 
+#'   that were ever sequenced, because if there is no sequencing then the 
+#'   trehalose utilization variant presence/absence cannot be calculated. If 
+#'   that's not calculated then we cannot use those ribotypes for imputation of 
 #'   presence/absence.
 #'
 #' @param variant_data Tibble. All of the relevant metadata. Rows correspond to
@@ -89,13 +90,13 @@ drop_ribo_absent_from_matched_WGS <- function(variant_data){
   return(variant_data)
 } # end drop_ribo_absent_from_matched_WGS()
 
-#' predict_num_with_var
-#' Given the observed frequency with which trehalose utilization variants occur 
-#'   by ribotype in the sequenced cohort and the number of not sequenced 
-#'   isolates you have per ribotype, simply multiply these two numbers together 
-#'   to get the total number isolates that should be assigned to "presence" 
-#'   during the later imputation step. Only use control-dervied data for 
-#'   controls; similarly, only used case-derived data for cases. This is
+#' Predict the number of isolates with the trehalose utilizatnoi variants
+#' @description Given the observed frequency with which trehalose utilization 
+#'   variants occur by ribotype in the sequenced cohort and the number of not
+#'   sequenced isolates you have per ribotype, simply multiply these two numbers 
+#'   together to get the total number isolates that should be assigned to 
+#'   "presence" during the later imputation step. Only use control-dervied data 
+#'   for controls; similarly, only used case-derived data for cases. This is
 #'   essential to keep with the case-control study design upon which this data
 #'   is based.
 #'
@@ -127,9 +128,9 @@ predict_num_with_var <- function(variant_data, tre_var_by_ribo, case_or_ctrl){
   return(num_of_missing_data_by_ribotype)
 } # end predict_num_with_var()
 
-#' generate_imputed_data
-#' Generate a tibble with the imputed data. One row for each sample that
-#'   wasn't sequenced. Each column, besides the ID, is a one run of the 
+#' Generate the imputed trehalose variant data
+#' @description Generate a tibble with the imputed data. One row for each sample
+#'  that wasn't sequenced. Each column, besides the ID, is a one run of the 
 #'  imputation process. 
 #'  Only generate imputed data on controls based on controls. 
 #'  Similarly, only generate imputed data on cases based on cases. 
@@ -189,10 +190,10 @@ generate_imputed_data <- function(variant_data, n_perm, n_per_ribo, case_or_ctrl
   return(perm_imputed_data)
 } # end generate_imputed_data()
 
-#' join_imputed_to_seq
-#' This function joins the imputed variant data to the observed variant data. 
-#'   Said another way, this function joins the non-matched data to the 
-#'   matched data. It does this by replicating the matched variant data 
+#' Join the imputed data with the WGS data
+#' @description This function joins the imputed variant data to the observed 
+#'   variant data. Said another way, this function joins the non-matched data to 
+#'   the matched data. It does this by replicating the matched variant data 
 #'   n_perm times, then row-binding the imputed data to this replicated and
 #'   matched data. At the end each column contains the matched & sequenced
 #'   variant data and the imputed (non-matched) variant data. This format
@@ -228,83 +229,14 @@ join_imputed_to_seq <- function(original_data, matched_seq_data, num_perm, imp_m
   return(all_data)
 } # end join_imputed_to_seq()
 
-#' calculate_FE
-#' @description 1. For the sequenced data calculate the FE for only the 
-#'   sequenced variants. Save FE results. 2. For a tibble with the isolates in
-#'   the rows and the columns as the combo of real (observed) supplemented with 
-#'   imputed trehalose utilization variants calculate the FE and return FE 
-#'   results. 
-#' @details Note, because the presence/absence of trehalose utilization variants
-#'   was assigned to cases and controls separately there is no difference in 
-#'   results for the FE test. This is not true for the logit because patient
-#'   level differences are included in that analysis (with the risk score). 
-#'   Therefore, only need to run one FE test -- any imputation yields identical
-#'   results. 
-#' @param var_data Tibble. The isolates are in the rows and the columns are a 
-#'   combination of real (observed) supplemented with imputed trehalose 
-#'   utilization variants
-#'
-#' @return FE_results. Matrix. Nrow = 1. Ncol = 5. Columns describe FE 
-#'   results: "OR", "95% CI (lower)", "95% CI (upper)", "P-value", and 
-#'   "Number Samples Included."
-#' @noRd
-calculate_FE <- function(var_data){
-  # Sequenced, matched results
-  seq_only <- var_data %>% filter(Imp_or_Obs == "observed")
-  seq_fe <- exact2x2(seq_only$Severe_Outcome, seq_only$C171S_L172I_or_insertion)
-  seq_results <- matrix(NA, ncol = 5, nrow = 1)
-  colnames(seq_results) <- c("OR", 
-                             "95% CI (lower)", 
-                             "95% CI (upper)",
-                             "P-value", 
-                             "Number Samples Included")
-  seq_results[1, 1] <- format(round(seq_fe$estimate, 2), nsmall = 2)
-  seq_results[1, 2] <- format(round(seq_fe$conf.int[1], 2), nsmall = 2)
-  seq_results[1, 3] <- format(round(seq_fe$conf.int[2], 2), nsmall = 2)
-  seq_results[1, 4] <- format(round(seq_fe$p.value, 2), nsmall = 2)
-  seq_results[1, 5] <- nrow(seq_only)
-  seq_results <- as_tibble(seq_results)
-  write_tsv(seq_results, 
-            path = paste0("../data/outputs/", 
-                          Sys.Date(),
-                          "_FE_only_sequenced_results.tsv"))
-  
-  # Imputed plus sequenced results
-  var_data <- 
-    var_data %>% 
-    filter(!is.na(Imp_or_Obs))
-  
-  FE_results <- matrix(NA, ncol = 5, nrow = 1)
-  colnames(FE_results)  <- c("OR", 
-                             "95% CI (lower)", 
-                             "95% CI (upper)",
-                             "P-value", 
-                             "Number Samples Included")
-  
-  temp_fe <- 
-    exact2x2(var_data$Severe_Outcome, var_data$imp1)
-  FE_results[1, 1] <- round(temp_fe$estimate, 2)
-  FE_results[1, 2] <- round(temp_fe$conf.int[1], 2)
-  FE_results[1, 3] <- round(temp_fe$conf.int[2], 2)
-  FE_results[1, 4] <- round(temp_fe$p.value, 2)
-  FE_results[1, 5] <- nrow(var_data)
-   
-  write_tsv(as_tibble(FE_results), 
-            path = paste0("../data/outputs/", 
-                          Sys.Date(), 
-                          "_FE_imputation_plus_sequenced_results.tsv"))
-  
-  return(FE_results)
-} # end calculate_FE()
-
-#' summarize_model_results
-#' Generate summary statistics for FE test or logitistic regression from real + 
-#'   imputed variants and save the results in a table. 
+#' Summarize the model results
+#' @description Generate summary statistics for logitistic regression from real 
+#'   + imputed variants and save the results in a table. 
 #'   
 #' @param model_results model_results. Matrix. Nrow = n_perm. Ncol = 5. Columns
 #'   describe model results: "OR", "95% CI (lower)", "95% CI (upper)", "P-value"
 #'   and "Number Samples Included."
-#' @param suffix Character. Description of test ("FE" or "logit"). Optional. 
+#' @param suffix Character. Description of test (ex: "logit"). Optional. 
 #'
 #' @return model_summary. Tibble. nrow = 1. Ncol = 6. Columns describe statistics 
 #'   summarizing the larger matrix model_results. Columns described: "Median OR", 
@@ -340,9 +272,9 @@ summarize_model_results <- function(model_results, suffix = ""){
   return(model_summary)
 } # end summarize_model_results()
 
-#' describe_imputation_cohort
-#' Save in a log file a basic summary of the size cohort included in the 
-#'   imputation steps. 
+#' Describe the cohort included in the imputation analysis
+#' @description Save in a log file a basic summary of the size cohort included 
+#'   in the imputation steps. 
 #' @param final_data Tibble. Metadata of the isolates included in the 
 #'   imputation steps. 
 #'
@@ -365,34 +297,7 @@ describe_imputation_cohort <- function(final_data, num_perm){
   n_imp_case <- imputed %>% filter(Severe_Outcome == 1) %>% nrow()
   n_imp_ctrl <- imputed %>% filter(Severe_Outcome == 0) %>% nrow()
   
-  # Describe FE test -----------------------------------------------------------
-  # Sequenced FE
-  FE_seq_only <-
-    final_data %>% 
-    filter(Imp_or_Obs == "observed")
-  FE_seq_only_case <- 
-    FE_seq_only %>% 
-    filter(Severe_Outcome == 1) %>%
-    nrow()
-  FE_seq_only_ctrl <- 
-    FE_seq_only %>% 
-    filter(Severe_Outcome == 0) %>% 
-    nrow()
-  
-  # Imputed + Sequenced FE
-  # Imputed plus all sequenced results
-  FE_all <- final_data %>% 
-    filter(!is.na(Imp_or_Obs)) 
-  FE_all_case <- 
-    FE_all %>% 
-    filter(Severe_Outcome == 1) %>% 
-    nrow()
-  FE_all_ctrl <-
-    FE_all %>% 
-    filter(Severe_Outcome == 0) %>% 
-    nrow()
-  
-  # Describe logit -------------------------------------------------------------
+  # Describe logit results -----------------------------------------------------
   logit_input <- 
     final_data %>% 
     filter(!is.na(Risk_Score), !is.na(Imp_or_Obs))
@@ -422,16 +327,6 @@ describe_imputation_cohort <- function(final_data, num_perm){
   print(paste0("Imputed Ribotype N = ", n_imp_ribo))
   print(paste0("Imputed Case N = ", n_imp_case))
   print(paste0("Imputed Control N = ", n_imp_ctrl))
-  
-  print("FE TEST ALL")
-  print(paste0("FE Test N = ", nrow(FE_all)))
-  print(paste0("FE Test Case N = ", FE_all_case))
-  print(paste0("FE Test Control N = ", FE_all_ctrl))
-  
-  print("FE TEST Seq & Match only")
-  print(paste0("FE Test N = ", nrow(FE_seq_only)))
-  print(paste0("FE Test Case N = ", FE_seq_only_case))
-  print(paste0("FE Test Control N = ", FE_seq_only_ctrl))
        
   print("Logit")
   print(paste0("Logit N = ", nrow(logit_input)))
@@ -440,7 +335,7 @@ describe_imputation_cohort <- function(final_data, num_perm){
   sink()
 } # end describe_imputation_cohort()
 
-#' calculate_logit
+#' Calculate logistic regression on imputed cohort
 #' @description Perform a logistic regression. Response variable: severe 
 #'   infection outcome. Predictors: Risk Score (as a continuous number) and the
 #'   presence/absence of the three trehalose utilization variants as a single 
@@ -533,10 +428,8 @@ calculate_logit <- function(var_dat, num_perm){
   model_results$`95% CI (upper)` <- as.numeric(model_results$`95% CI (upper)`)
   model_results$`P-value` <- as.numeric(model_results$`P-value`)
 
-  # # Get 10 representative model results
-  # # Evenly distributed results ranging from min to max point estimate
-  # # By 10% increments
-  
+  # Get 10 representative model results: evenly distributed results ranging from 
+  # min to max point estimate, in 10% increments. 
   ordered_model_results <- 
     model_results %>%
     arrange(OR)
@@ -587,9 +480,11 @@ calculate_logit <- function(var_dat, num_perm){
   return(model_results)
 } # end calculate_logit()
 
-#' impute_variants
-#' Wrapper function to perform trehalose utilization variant imputation on 
-#'   isolates for which there is ribotype information but not sequence data. 
+#' Perform imputation and analysis
+#' @description Wrapper function to perform trehalose utilization variant
+#'  imputation on isolates for which there is ribotype information but not
+#'  sequence data. Then perform statistical analysis on imputed data plus the
+#'  sequence data. 
 #' @param metadata_path Character. Path to metadata file. 
 #' @param num_perm Number. Number of times to run imputation. 
 #'
@@ -646,7 +541,6 @@ impute_variants <- function(metadata_path, num_perm){
                                               matched_seq_data,
                                               num_perm, 
                                               impute_var_all)
-  fe_results <- calculate_FE(imputed_and_matched)
   logit_results <- calculate_logit(imputed_and_matched, num_perm)
   logit_summary <- summarize_model_results(logit_results, "_logit_risk_score")
   describe_imputation_cohort(imputed_and_matched, num_perm)
