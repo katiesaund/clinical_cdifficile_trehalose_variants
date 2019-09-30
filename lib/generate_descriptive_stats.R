@@ -102,8 +102,8 @@ generate_stats <- function(metadata_path){
   print("Number of ribotypes (N=1144)")
   print(length(unique(metadata$Ribotype))) 
   
-  # Number of isolates given a propensity score
-  print("Number of isolates with a propensity score")
+  # Number of isolates given a Risk Score
+  print("Number of isolates with a risk score")
   print(sum(!is.na(metadata$Risk_Score)))
   
   print("Number of isolates with placed in a stratum")

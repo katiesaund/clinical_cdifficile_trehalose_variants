@@ -20,7 +20,7 @@ source("../lib/save_four_gene_insertion_sequences.R")
 model_variables <- 
   read_tsv("../data/inputs/model_variables_plus_ribo_and_id.tsv")
 
-# Create propensity scores and strata based on KR logistic regression
+# Create risk scores and strata based on KR logistic regression
 create_risk_scores_and_strata(model_variables)
 
 # Format additional input data necessary for analysis 

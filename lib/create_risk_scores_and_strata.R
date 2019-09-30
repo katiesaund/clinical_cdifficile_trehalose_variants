@@ -5,7 +5,7 @@
 #'   model in Rao 2015 CID paper for trehalose analysis.  
 #' @param model_data Matrix or dataframe with model data.  
 #'
-#' @return Dataframe with dataset's propensity scores, stratum (when 
+#' @return Dataframe with dataset's risk scores, stratum (when 
 #'   applicable), and original data that went into creating model. 
 #' @noRd
 create_risk_scores_and_strata <- function(model_data){
@@ -44,7 +44,7 @@ create_risk_scores_and_strata <- function(model_data){
                family = binomial(logit), 
                data = complete_data)
 
-  # Generate propensity scores
+  # Generate Risk Scores
   complete_data$scores <- predict(model, type = c("response"))
 
   duplicated_ptx <- 
