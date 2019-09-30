@@ -117,12 +117,9 @@ run_clogit_models <- function(metadata_path){
   smaller_model <- model_results[model_results[ , 1] %in% var_of_interest, ]
 
   # Save results
-  write_tsv(as_tibble(model_results),
-            "../data/outputs/clogit_all_trehalose_variants.tsv")
-  
   write_tsv(as_tibble(model_results), 
             "../data/outputs/Supplementary_table_2.tsv")
   
   write_tsv(as_tibble(smaller_model), 
-            "../data/outputs/_clogit_only_trehalose_variants_of_interest.tsv")
+            "../data/outputs/clogit_only_trehalose_variants_of_interest.tsv")
 } # end run_clogit_models()

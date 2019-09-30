@@ -307,7 +307,7 @@ describe_imputation_cohort <- function(final_data, num_perm){
     filter(Severe_Outcome == 0) %>% 
     nrow()
 
-  sink("../data/outputs/imputation_descriptive_statstxt")
+  sink("../data/outputs/imputation_descriptive_stats.txt")
   print("Number of permutations")
   print(num_perm)
   
@@ -452,9 +452,9 @@ calculate_logit <- function(var_dat, num_perm){
          axis.title = element_text(size = rel(2)))
 
   ggsave(CI_plot,
-         filename = "../figures/logit_with_score_imputation_OR_and_CI.pdf"))
+         filename = "../figures/logit_with_score_imputation_OR_and_CI.pdf")
   
-  pdf("../figures/logit_with_score_imputation_OR_hist.pdf"))
+  pdf("../figures/logit_with_score_imputation_OR_hist.pdf")
   hist(model_results$OR, 
        main = "Logit: Severe ~ Risk Score + Any Trehalose Variant",
        xlab = "OR", 
