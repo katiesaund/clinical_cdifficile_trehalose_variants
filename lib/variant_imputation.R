@@ -48,8 +48,7 @@ calculate_variant_ratio_by_ribo <- function(variant_data, case_or_ctrl){
   colnames(save_version)[2] <- 
     "% of isolates with trehalose utilization variant"
   write_tsv(save_version, 
-            path = paste0("../data/outputs/", 
-                          "_trehalose_prevalence_by_ribotype_",
+            path = paste0("../data/outputs/trehalose_prevalence_by_ribotype_",
                           case_or_ctrl, 
                           ".tsv"), 
             col_names = TRUE)
@@ -264,7 +263,7 @@ summarize_model_results <- function(model_results, suffix = ""){
   
   write_tsv(as_tibble(model_summary), 
             path = paste0("../data/outputs/", 
-                          "_imputation_plus_sequenced_results_summary", 
+                          "imputation_plus_sequenced_results_summary", 
                           suffix, 
                           ".tsv"))
   return(model_summary)
@@ -308,9 +307,7 @@ describe_imputation_cohort <- function(final_data, num_perm){
     filter(Severe_Outcome == 0) %>% 
     nrow()
 
-  sink(paste0("../data/outputs/", 
-              "_imputation_descriptive_stats", 
-              ".txt"))
+  sink("../data/outputs/imputation_descriptive_statstxt")
   print("Number of permutations")
   print(num_perm)
   
@@ -411,8 +408,7 @@ calculate_logit <- function(var_dat, num_perm){
   
   # Save table 
   write_tsv(x = model_results, 
-            path = paste0("../data/outputs/", 
-                          "_logit_with_score_imputation.tsv"))
+            path = "../data/outputs/logit_with_score_imputation.tsv")
 
   model_results <- as_tibble(model_results)
   model_results$Variant <- as.factor(model_results$Variant)
@@ -456,13 +452,9 @@ calculate_logit <- function(var_dat, num_perm){
          axis.title = element_text(size = rel(2)))
 
   ggsave(CI_plot,
-         filename = paste0("../figures/",
-                           Sys.Date(),
-                           "_logit_with_score_imputation_OR_and_CI.pdf"))
+         filename = "../figures/logit_with_score_imputation_OR_and_CI.pdf"))
   
-  pdf(paste0("../figures/", 
-             Sys.Date(),
-             "_logit_with_score_imputation_OR_hist.pdf"))
+  pdf("../figures/logit_with_score_imputation_OR_hist.pdf"))
   hist(model_results$OR, 
        main = "Logit: Severe ~ Risk Score + Any Trehalose Variant",
        xlab = "OR", 

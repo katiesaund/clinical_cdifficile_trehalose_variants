@@ -290,14 +290,6 @@ save_data_for_tre_analysis <- function(out_group,
   # Save tree  
   write.tree(tree, file = "../data/outputs/trehalose.tree")
   
-  # Save metadata
-  write.table(metadata, 
-              file = "../data/outputs/pre-analysis_trehalose_metadata.tsv", 
-              sep = "\t", 
-              quote = FALSE, 
-              col.names = TRUE, 
-              row.names = FALSE)
-  
   # Save metadata for Supplementary table 1
   write.table(metadata, 
               file = "../data/outputs/Supplementary_table_1.tsv", 

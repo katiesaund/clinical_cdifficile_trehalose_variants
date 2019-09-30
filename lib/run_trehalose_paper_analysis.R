@@ -41,7 +41,7 @@ save_data_for_tre_analysis(out_group,
                            model_path)
 
 # Describe study cohort (ribotype, presence of trehalose variants, etc...)
-metadata_path <- "../data/outputs/pre-analysis_trehalose_metadata.tsv"
+metadata_path <- "../data/outputs/Supplementary_table_1.tsv"
 generate_stats(metadata_path)
 
 # Plot tree with trehalose variants on it 
