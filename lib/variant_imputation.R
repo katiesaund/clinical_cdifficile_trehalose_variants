@@ -349,9 +349,6 @@ describe_imputation_cohort <- function(final_data, num_perm){
 #'   95% CI (upper). Numeric. 
 #'   P-value. Numeric. 
 #'   Number Samples Included. Numeric. 
-#' @export
-#'
-#' @examples
 calculate_logit <- function(var_dat, num_perm){
   # Rearrange code to have only the trehalose variants and the necessary columns
   # Remember that "imputed" columns have imputed data for non-sequenced results
