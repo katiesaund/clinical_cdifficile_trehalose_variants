@@ -1,7 +1,7 @@
-#' plot_trehalose_tree
-#' Plot the trehalose project tree with annotations for ribotypes, trehalose
-#'   utilization variants, and severe infection outcome. Saves plot as a PDF
-#'   in the ../figures/ dir. 
+#' Plot phylogenetic tree with trehalose utilization variants and ribotype info
+#' @description Plot the trehalose project tree with annotations for ribotypes, 
+#'   trehalose utilization variants, and severe infection outcome. Saves plot as
+#'    a PDF in the ../figures/ dir. 
 #' @param tree_path Character. Path to location of tree file. 
 #' @param metadata_path Character. Path to location of metadata file. 
 #' @param show_labels Logical. Whether or not to plot tree with isolate names.
@@ -109,7 +109,7 @@ plot_trehalose_tree <- function(tree_path, metadata_path, show_labels = TRUE){
 
   # PLOT ----------------------------------------------------------------------#
   pdf(paper = "USr", 
-      file = paste0("../figures/Figure_1.pdf"), 
+      file = "../figures/Figure_1.pdf", 
       width = 10, 
       height = 8)
   plot(tree, 
