@@ -2,7 +2,7 @@
 This reposity contains details in support of a manuscript currently in submission. The focus of this work is the analysis of the association between trehalose utilization variants in clinical _C. difficile_ isolates and infection severity.  
 
 ### Manuscript Title
-Genetic determinants of trehalose utilization are not associated with severe Clostridium difficile infection  
+Genetic determinants of trehalose utilization are not associated with severe _Clostridium difficile_ infection  
   
 ### Mansucript Authors
 Katie Saund, Krishna Rao, Vince Young, and Evan Snitkin.  
