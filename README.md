@@ -1,5 +1,5 @@
 # Clinical _C. difficile_ with Trehalose Utilization Variants  
-This reposity contains details in support of a manuscript currently in submission. The focus of this work is the analysis of the association between trehalose utilization variants in clinical _C. difficile_ isolates and infection severity. 
+This reposity contains details in support of a manuscript currently under review. The focus of this work is the analysis of the association between trehalose utilization variants in clinical _C. difficile_ isolates and infection severity. 
 
 The preprint is available to read here: https://www.medrxiv.org/content/10.1101/19008342v1. 
 
