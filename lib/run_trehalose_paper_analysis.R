@@ -30,8 +30,7 @@ keeper_path <-
 tree_path <- "../data/inputs/input_tree.tree" 
 snp_path <- "../data/inputs/SNP_matrix.tsv"
 pan_path <- "../data/inputs/gene_presence_absence.Rtab"
-
-model_path <- paste0("../data/outputs/severity_model.tsv")
+model_path <- "../data/outputs/severity_model.tsv"
 
 save_data_for_tre_analysis(out_group, 
                            keeper_path,
