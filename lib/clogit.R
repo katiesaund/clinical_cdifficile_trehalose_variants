@@ -34,19 +34,20 @@ run_clogit_models <- function(metadata_path){
                    "Cys171Ser",
                    "age", 
                    "gender..M.0.F.1.", 
-                   "METS", 
-                   "concurrentabx",
-                   "Lowest_SBP", 
-                   "highcreat", 
-                   "highbili", 
-                   "WBC", 
+                   "metastatic_cancer", 
+                   "concurrent_antibiotics",
+                   "lowest_systolic_blood_pressure", 
+                   "high_creatinine", 
+                   "high_bilirubin", 
+                   "white_blood_cell_count", 
                    "Duplicated_Patient", 
                    "Missing_Model_Data", 
                    "Risk_Score",           
                    "Duplicated_Patient_No_Missing_Info", 
                    "Unmatched", 
                    "WGS_performed", 
-                   "Stratum_complete")
+                   "Stratum_complete", 
+                   "healthcare_associated_CDI")
   model_input <- 
     model_input[ , !(colnames(model_input) %in% col_to_drop), drop = FALSE]
   model_input <- 
