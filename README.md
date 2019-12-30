@@ -4,7 +4,7 @@ This reposity contains details in support of a manuscript currently under review
 The preprint is available on [medRxiv](https://www.medrxiv.org/content/10.1101/19008342v1).
 
 ### Manuscript Title
-Genetic determinants of trehalose utilization are not associated with severe _Clostridium difficile_ infection  
+Genetic determinants of trehalose utilization are not associated with severe _Clostridium difficile_ infection outcome
   
 ### Mansucript Authors
 [Katie Saund](https://orcid.org/0000-0002-6214-6713), Krishna Rao, Vince Young, and Evan Snitkin.  
