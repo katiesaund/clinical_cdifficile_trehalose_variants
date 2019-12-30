@@ -7,7 +7,7 @@ The preprint is available to read here: https://www.medrxiv.org/content/10.1101/
 Genetic determinants of trehalose utilization are not associated with severe _Clostridium difficile_ infection  
   
 ### Mansucript Authors
-Katie Saund (https://orcid.org/0000-0002-6214-6713), Krishna Rao, Vince Young, and Evan Snitkin.  
+[Katie Saund](https://orcid.org/0000-0002-6214-6713), Krishna Rao, Vince Young, and Evan Snitkin.  
 
 ### Repository contents
 This repository includes the R code necessary for figures, supplementary tables, and statistical analyses.  
