@@ -1,7 +1,7 @@
 # Clinical _C. difficile_ with Trehalose Utilization Variants  
 This repository contains the analysis for a manuscript published at Open Forum Infectious Disease in January 2020. The focus of this work is the analysis of the association between trehalose utilization variants in clinical _C. difficile_ isolates and infection severity outcome in patients. 
 
-The paper is available at [Open Forum Infectious Diseases](https://academic.oup.com/ofid/advance-article/doi/10.1093/ofid/ofz548/5696590).
+The paper is available at [Open Forum Infectious Diseases](https://academic.oup.com/ofid/article/7/1/ofz548/5696590).
 
 ### Manuscript Title
 Genetic determinants of trehalose utilization are not associated with severe _Clostridium difficile_ infection outcome
