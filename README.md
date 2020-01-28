@@ -11,7 +11,7 @@ Genetic determinants of trehalose utilization are not associated with severe _Cl
 
 ### Repository contents
 This repository includes the R code necessary for figures, supplementary tables, and statistical analyses.   
-NOTE: If running the code, users must (1) unzip the zipped data file and (2) add an directory names "outputs" inside the data/ directory.
+NOTE: If running the code, users must (1) unzip the zipped data file and (2) add an directory named "outputs" inside the data/ directory.
   
 ### Sequence data  
 _C. difficile_ genome sequences are available under the NCBI BioProject [PRJNA561087.](https://www.ncbi.nlm.nih.gov/bioproject/561087)   
