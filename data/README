@@ -1,4 +1,7 @@
 Notes on the data in this directory: 
+* Users must add a /output folder to run the project code successfully.
+* Users must unzip the SNP_matrix prior to running the project code.
+
 
 # Data generated prior to trehalose analysis ----------------------------------#
 * inputs/pan_genome_reference.fa
